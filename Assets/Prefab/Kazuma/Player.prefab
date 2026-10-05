@@ -135,6 +135,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2b59f1a77b9df74986c3e7216d2f715, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaDragPlayer
+  parameters:
+    parryRange: 1
+    cueSpeed: 1
+    cueGrowth: 1
+    attack: 1
+    cueReproduction: 1
+    cueHitRange: 1
   dragSensitivity: 1
   maximumFlickSpeed: 18
   body: {fileID: 9013661566043053957}

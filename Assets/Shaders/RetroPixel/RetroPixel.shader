@@ -36,10 +36,15 @@ Shader "InternTeam/Retro Pixel"
 
             // マテリアルから受け取る設定値。Propertiesと同じ名前で対応付ける。
             CBUFFER_START(UnityPerMaterial)
+                // マテリアルで指定した縦方向の仮想ドット数。
                 float _VerticalResolution;
+                // 1ならドットの辺の長さを整数ピクセルへ丸める。
                 float _IntegerScale;
+                // 減色後のRGB各チャンネルの段階数。
                 float _ColorLevels;
+                // 元の色から減色結果へ混ぜる割合（0～1）。
                 float _ColorReduction;
+                // 減色の丸めに加えるディザ模様の強さ（0～1）。
                 float _DitherStrength;
             CBUFFER_END
 
@@ -49,8 +54,11 @@ Shader "InternTeam/Retro Pixel"
             {
                 // 模様は元画像のピクセルではなく、ドット化後のマス目に固定する。
                 uint2 low = cell & 1u;
+                // ドット座標の下から2番目のビット。4×4内のブロック位置を求める。
                 uint2 high = (cell >> 1u) & 1u;
+                // 2×2内の位置に対応するディザの基本番号（0～3）。
                 uint a = ((low.x ^ low.y) << 1u) | low.y;
+                // 4×4内のブロックに対応するディザの補助番号（0～3）。
                 uint b = ((high.x ^ high.y) << 1u) | high.y;
                 return (float(4u * a + b) + 0.5) / 16.0 - 0.5;
             }
@@ -61,7 +69,9 @@ Shader "InternTeam/Retro Pixel"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 // 実際の描画バッファのサイズを使い、縦ドット数から1ドットの辺の長さを求める。
                 float2 size = max(_ScaledScreenParams.xy, 1.0);
+                // 実際の画面の高さを超えないように制限した縦ドット数。
                 float height = clamp(round(_VerticalResolution), 1.0, size.y);
+                // 仮想ドット1個の辺の長さ（描画バッファ上のピクセル数）。
                 float blockSize = size.y / height;
                 if (_IntegerScale > 0.5)
                     blockSize = max(1.0, round(blockSize));
@@ -69,6 +79,7 @@ Shader "InternTeam/Retro Pixel"
                 // UV（画像の位置を0～1で表す座標）を通常の画面範囲へ戻してから、マス目に区切る。
                 // 横・縦に同じ辺の長さを使うため、画面比率が変わってもドットは正方形になる。
                 float2 uv = DYNAMIC_SCALING_REMOVE_SCALEBIAS(input.texcoord);
+                // 今回の画面ピクセルが属する仮想ドットの番号（横・縦）。
                 float2 cell = floor(uv * size / blockSize);
                 // 各マス目の中心を読む。0.5を加えることで境界上のサンプリングを避ける。
                 float2 sampleUV = (cell + 0.5) * blockSize / size;
@@ -87,7 +98,9 @@ Shader "InternTeam/Retro Pixel"
                     #endif
                     // 0～1の色を指定段階数に丸める。ディザは丸める前に加えて模様を作る。
                     float steps = max(2.0, round(_ColorLevels)) - 1.0;
+                    // 減色前に加える模様の値。ディザ強度が0なら0。
                     float noise = Bayer4((uint2)cell) * _DitherStrength;
+                    // 指定した色の段階数へ丸めた表示用のRGB値。
                     float3 reduced = saturate(floor(saturate(displayColor) * steps + 0.5 + noise) / steps);
                     // HDRの白（1.0）を超える明るさは、切り捨てずに減色後へ戻す。
                     reduced += max(displayColor - 1.0, 0.0);

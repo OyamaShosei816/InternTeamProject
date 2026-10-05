@@ -7,39 +7,65 @@ namespace KazumaPrototype
     // Arena が ReadInput を呼び、移動速度や押す／離す瞬間を水風船の制御に渡す。
     public sealed class KazumaDragPlayer : MonoBehaviour
     {
+        // キャラクターの基本性能。実行時のパッシブ補正もこのインスタンスに保持する。
+        [Header("キャラクター性能：パリィ・キュー・攻撃力")]
+        [Tooltip("項目を開いて6種類の基本倍率を調整します。すべて1が従来の性能です。")]
+        [SerializeField] private KazumaPlayerParameters parameters = new KazumaPlayerParameters();
+
+        // Arenaと水風船が参照する共通パラメーター。旧Prefabにも初期値で対応する。
+        public KazumaPlayerParameters Parameters => parameters ?? (parameters = new KazumaPlayerParameters());
+
         // ドラッグ移動量の倍率。1なら画面上の指の移動に対応した距離だけ動く。
+        [Header("操作：ドラッグへの反応倍率")]
+        [Tooltip("1が標準です。大きくすると同じ指の移動でプレイヤーがより遠くへ動きます。")]
         [SerializeField] private float dragSensitivity = 1f;
         // 水風船へ渡す速度の上限（ワールド単位／秒）。プレイヤーの移動距離自体は制限しない。
+        [Header("投げ操作：引き継ぐ速度の上限")]
+        [Tooltip("水風船へ渡す移動速度の上限（ワールド単位／秒）。大きいほど速いフリックを反映できます。")]
         [SerializeField] private float maximumFlickSpeed = 18f;
+        // 色や形を表示する本体のRenderer。
+        [Header("プレイヤーの見た目：表示用Renderer")]
+        [Tooltip("プレイヤーPrefab内の球のRendererを設定します。無敵や勝敗に応じた色変更に使います。")]
         [SerializeField] private Renderer body;
         // プレイヤーの当たり判定半径。見た目の拡縮とは独立している。
         public const float Radius = 0.34f;
         // 現在押しているか、今回の移動速度、投げるときに使う直近の移動速度。
         public bool IsHeld { get; private set; }
+        // 1秒当たりの移動量を表す速度。
         public Vector3 Velocity { get; private set; }
+        // 投げる瞬間に水風船へ加える、直近のプレイヤー移動速度。
         public Vector3 FlickVelocity { get; private set; }
         // 押し始め／離した瞬間だけ true。入力更新のたびにリセットする。
         public bool PressedThisFrame { get; private set; }
+        // 今回の入力更新で、押していた指・ボタンを離した場合だけtrue。
         public bool ReleasedThisFrame { get; private set; }
+        // 前回の指・マウスの画面座標（ピクセル）。
         private Vector2 previousPointer;
         // 操作中の指を識別するID。-1はマウス、または操作していない状態。
         private int pointerId = -1;
         // アプリ復帰時などに、押しっぱなしの入力を一度離すまで無視する。
         private bool ignoreUntilRelease;
+        // 最後に動いた時刻（ゲームの時間倍率に影響されない秒数）。
         private float lastMovementTime;
+        // 共有マテリアルを変えず、対象だけの色を指定するためのデータ。
         private MaterialPropertyBlock properties;
 
         // 端末の入力を読み取る入口。タッチを優先し、同じ処理 FeedPointer に渡す。
         // bounds は移動可能なX/Z範囲（RectのYはワールドZとして扱う）、dt は秒。
         public void ReadInput(Camera camera, Rect bounds, float dt)
         {
+            // 今回、操作用の指またはマウスボタンが押されているか。
             bool held = false;
+            // 今回の指・マウスの画面座標（ピクセル）。
             Vector2 position = default;
+            // 入力元を識別するID。タッチは指のID、マウスは-1。
             int id = -1;
+            // 現在利用できるタッチ入力デバイス。存在しない場合はnull。
             var touchscreen = Touchscreen.current;
             // 最初に触れた指を追跡し続ける。途中で別の指を追加しても位置が飛ばないようにする。
             if (touchscreen != null)
             {
+                // touch：一覧から取り出した、今回処理する対象。
                 foreach (var touch in touchscreen.touches)
                 {
                     if (!touch.press.isPressed || (IsHeld && pointerId >= 0 && touch.touchId.ReadValue() != pointerId))
@@ -91,11 +117,16 @@ namespace KazumaPrototype
             // 前回／今回の画面座標から、プレイヤーと同じ高さの水平面へレイを飛ばす。
             // 交点の差分を使うため、カメラの拡大率や画面サイズを移動量に反映できる。
             var plane = new Plane(Vector3.up, transform.position);
+            // 前回の画面座標から水平面へ飛ばすレイ。
             Ray before = camera.ScreenPointToRay(previousPointer);
+            // 今回の画面座標から水平面へ飛ばすレイ。
             Ray after = camera.ScreenPointToRay(position);
             previousPointer = position;
+            // a/bは前回／今回のレイが水平面に届くまでの距離。交点を求めるために使う。
             if (!plane.Raycast(before, out float a) || !plane.Raycast(after, out float b)) return;
+            // 移動処理を始める前のプレイヤー位置。
             Vector3 oldPosition = transform.position;
+            // ドラッグ量を加えた移動先。後で移動可能範囲に収める。
             Vector3 target = oldPosition + (after.GetPoint(b) - before.GetPoint(a)) * dragSensitivity;
             target.x = Mathf.Clamp(target.x, bounds.xMin, bounds.xMax);
             target.z = Mathf.Clamp(target.z, bounds.yMin, bounds.yMax);
