@@ -7,6 +7,8 @@ namespace KazumaPrototype
     public sealed class KazumaBullet : MonoBehaviour
     {
         // 弾の表示部分。Prefab作成時にBuilderから設定する。
+        [Header("敵弾の見た目：表示用Renderer")]
+        [Tooltip("敵弾Prefab内の球のRendererを設定します。強さに応じて色が変わります。")]
         [SerializeField] private Renderer body;
         // 強さは1～3。水風船が同じ強さ以上なら、この弾を消せる。
         public int Power { get; private set; }
@@ -25,6 +27,7 @@ namespace KazumaPrototype
             transform.localScale = Vector3.one * Radius * 2f;
             // 共有マテリアル自体を変更せず、この弾だけの色を設定する。
             var properties = new MaterialPropertyBlock();
+            // 強さ1は緑、2は黄、3は紫で表示するための色。
             Color color = Power == 1 ? new Color(0.25f, 1f, 0.3f) : Power == 2 ? new Color(1f, 0.8f, 0.1f) : new Color(1f, 0.25f, 0.85f);
             properties.SetColor("_BaseColor", color);
             properties.SetColor("_Color", color);
