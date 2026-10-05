@@ -9,13 +9,13 @@ public class Timer : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        time += Time.deltaTime;
-        timeText.text = time.ToString("F2");
+        time = 0; // 開始時間
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        time += Time.deltaTime; // 時間を加算
+        timeText.text = time.ToString("F2"); // 時間を画面に表示
     }
 }
