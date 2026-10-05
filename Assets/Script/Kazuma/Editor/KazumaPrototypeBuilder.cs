@@ -8,12 +8,16 @@ using UnityEngine.SceneManagement;
 
 namespace KazumaPrototype.Editor
 {
+    // Unityエディター専用。Tools/Kazumaメニューから試作シーン・Prefab・マテリアルを再生成する。
+    // 既存の生成用ルートを置き換え、カメラ設定と保存済みアセットも更新するため、手動編集後の実行には注意。
     public static class KazumaPrototypeBuilder
     {
+        // 生成先の固定パス。ScenePathのシーンは事前に存在している必要がある。
         public const string ScenePath = "Assets/Scenes/Kazuma.unity";
         private const string PrefabPath = "Assets/Prefab/Kazuma/";
         private const string MaterialPath = "Assets/Materials/Kazuma/";
 
+        // 再生成の入口。通常実行では編集中シーンの保存確認を表示してから進む。
         [MenuItem("Tools/Kazuma/Rebuild gameplay prototype")]
         public static void Build()
         {
@@ -22,8 +26,10 @@ namespace KazumaPrototype.Editor
             Directory.CreateDirectory(MaterialPath);
             AssetDatabase.Refresh();
             Scene scene = EditorSceneManager.OpenScene(ScenePath);
+            // 前回このツールで作ったルートだけ削除し、同名のゲーム部分が重複しないようにする。
             foreach (var root in scene.GetRootGameObjects())
                 if (root.name == "Kazuma Gameplay Prototype") UnityEngine.Object.DestroyImmediate(root);
+            // MainCameraタグのカメラを真上から見下ろす平行投影に設定する。
             Camera camera = Camera.main;
             camera.transform.SetPositionAndRotation(new Vector3(0, 20, 0), Quaternion.Euler(90, 0, 0));
             camera.orthographic = true;
@@ -34,6 +40,7 @@ namespace KazumaPrototype.Editor
             camera.farClipPlane = 50f;
             camera.GetUniversalAdditionalCameraData().renderPostProcessing = false;
 
+            // 役割ごとのマテリアルを作成／再利用し、識別しやすい色を割り当てる。
             Material playerMaterial = Material("Player", new Color(0.12f, 0.8f, 1f));
             Material ballMaterial = Material("WaterBalloon", new Color(0.25f, 1f, 0.3f));
             Material bossMaterial = Material("Boss", new Color(0.85f, 0.12f, 0.12f));
@@ -41,6 +48,7 @@ namespace KazumaPrototype.Editor
             Material lineMaterial = Material("Tether", new Color(0.5f, 0.7f, 0.75f), "Universal Render Pipeline/Particles/Unlit");
             Material pulseMaterial = Material("Pulse", Color.white, "Universal Render Pipeline/Particles/Unlit");
 
+            // プレイヤーPrefab：見た目の球と、入力・移動を担当するコンポーネントを組み合わせる。
             var playerRoot = new GameObject("Player");
             var playerBody = Sphere("Body", playerRoot.transform, Vector3.zero, Vector3.one * 0.68f, playerMaterial);
             var player = playerRoot.AddComponent<KazumaDragPlayer>();
@@ -48,6 +56,7 @@ namespace KazumaPrototype.Editor
             GameObject playerPrefab = PrefabUtility.SaveAsPrefabAsset(playerRoot, PrefabPath + "Player.prefab");
             UnityEngine.Object.DestroyImmediate(playerRoot);
 
+            // 水風船Prefab：球、紐の線、動作を管理するコンポーネントを組み合わせる。
             var ballRoot = new GameObject("WaterBalloon");
             var ballBody = Sphere("Body", ballRoot.transform, Vector3.zero, Vector3.one * 0.8f, ballMaterial);
             var line = ballRoot.AddComponent<LineRenderer>();
@@ -62,6 +71,7 @@ namespace KazumaPrototype.Editor
             GameObject balloonPrefab = PrefabUtility.SaveAsPrefabAsset(ballRoot, PrefabPath + "WaterBalloon.prefab");
             UnityEngine.Object.DestroyImmediate(ballRoot);
 
+            // 敵弾Prefab：出現後の位置・強さ・色はArenaから初期化される。
             var bulletRoot = new GameObject("EnemyBullet");
             var bulletBody = Sphere("Body", bulletRoot.transform, Vector3.zero, Vector3.one, ballMaterial);
             var bullet = bulletRoot.AddComponent<KazumaBullet>();
@@ -69,6 +79,7 @@ namespace KazumaPrototype.Editor
             GameObject bulletPrefab = PrefabUtility.SaveAsPrefabAsset(bulletRoot, PrefabPath + "EnemyBullet.prefab");
             UnityEngine.Object.DestroyImmediate(bulletRoot);
 
+            // 保存したPrefabをシーンへ配置し、ボスと弱点を作ってArenaに各参照を渡す。
             var gameplay = new GameObject("Kazuma Gameplay Prototype");
             var arena = gameplay.AddComponent<KazumaPrototypeArena>();
             var playerInstance = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, gameplay.transform);
@@ -78,6 +89,7 @@ namespace KazumaPrototype.Editor
             var instanceLine = ballInstance.GetComponent<LineRenderer>();
             instanceLine.SetPosition(0, playerInstance.transform.position);
             instanceLine.SetPosition(1, ballInstance.transform.position);
+            // Prefab本体との差分を記録し、シーンを開き直しても配置や紐の位置を保持する。
             PrefabUtility.RecordPrefabInstancePropertyModifications(playerInstance.transform);
             PrefabUtility.RecordPrefabInstancePropertyModifications(ballInstance.transform);
             PrefabUtility.RecordPrefabInstancePropertyModifications(instanceLine);
@@ -93,12 +105,14 @@ namespace KazumaPrototype.Editor
             Set(arena, "boss", boss);
             Set(arena, "weakPoint", weakPoint);
             Set(arena, "effectMaterial", pulseMaterial);
+            // シーンとアセットの両方を保存して、次回起動時にも生成結果を使えるようにする。
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("Kazuma prototype scene and prefabs saved.");
         }
 
+        // 指定の親に、表示用の球を作成する。positionとscaleは親に対するローカル値。
         private static Renderer Sphere(string name, Transform parent, Vector3 position, Vector3 scale, Material material)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -106,7 +120,7 @@ namespace KazumaPrototype.Editor
             go.transform.SetParent(parent, false);
             go.transform.localPosition = position;
             go.transform.localScale = scale;
-            // Gameplay uses swept sphere tests rather than frame-dependent trigger callbacks.
+            // 当たり判定はArenaで移動区間を調べるため、標準のColliderは外す。
             UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());
             Renderer renderer = go.GetComponent<Renderer>();
             renderer.sharedMaterial = material;
@@ -115,6 +129,8 @@ namespace KazumaPrototype.Editor
             return renderer;
         }
 
+        // 同名のマテリアルを再利用し、なければ指定シェーダーで作成する。
+        // 既存のマテリアルではシェーダーを変更せず、色と対応する光沢値を更新する。
         private static Material Material(string name, Color color, string shaderName = "Universal Render Pipeline/Lit")
         {
             string path = MaterialPath + name + ".mat";
@@ -132,6 +148,7 @@ namespace KazumaPrototype.Editor
             return material;
         }
 
+        // SerializeFieldの非公開フィールドに、Unityの保存対象としてオブジェクト参照を設定する。
         private static void Set(UnityEngine.Object target, string property, UnityEngine.Object value)
         {
             var serialized = new SerializedObject(target);

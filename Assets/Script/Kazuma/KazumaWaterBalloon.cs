@@ -2,32 +2,52 @@ using UnityEngine;
 
 namespace KazumaPrototype
 {
+    // 水風船の公転、回転による強化、投擲、回復と見た目を管理する。
+    // Arena が細かい時間刻みで Simulate を呼び、衝突時は Consume で回復待ちにする。
     public sealed class KazumaWaterBalloon : MonoBehaviour
     {
+        // Ready: 待機／Orbiting: 押している間の公転／Flying: 投擲中／Recovering: 再出現待ち。
         public enum MotionState { Ready, Orbiting, Flying, Recovering }
+        // 公転の調整値。距離はワールド単位、時間は秒、角速度はラジアン／秒。
         [Header("Elastic orbit")]
+        // プレイヤーから公転目標までの距離。
         [SerializeField] private float orbitRadius = 1.35f;
+        // 目標へ引き戻すばねの強さ。大きいほど素早く追従する。
         [SerializeField] private float spring = 65f;
+        // 速度を減衰させる強さ。大きいほど揺れが収まりやすい。
         [SerializeField] private float damping = 6f;
+        // 基本の公転角速度。強さとプレイヤーの移動速度に応じて加速する。
         [SerializeField] private float baseAngularSpeed = 3.8f;
+        // 紐の最大長。超えた場合は位置と外向きの速度を補正する。
         [SerializeField] private float maximumTetherLength = 2.25f;
+        // 強さが1段階上がるまでの実回転数。初期値は3周、強さの上限は3。
         [SerializeField, Min(1)] private int revolutionsPerLevel = 3;
         [Header("Throw")]
+        // 投擲時にプレイヤーのフリック速度を加える倍率。
         [SerializeField] private float flickInfluence = 0.8f;
+        // 投擲直後の速度上限（ワールド単位／秒）。
         [SerializeField] private float maximumLaunchSpeed = 30f;
+        // 命中・寿命切れから再出現までの待ち時間（秒）。
         [SerializeField] private float recoveryDelay = 0.65f;
         [SerializeField] private Renderer body;
         [SerializeField] private LineRenderer tether;
+        // 固定の当たり判定半径。見た目の伸び縮みでは変化しない。
         public const float Radius = 0.4f;
         public MotionState State { get; private set; }
         public int Power { get; private set; } = 1;
+        // 強化用に蓄積した角度を「周」に換算する（2πラジアン＝1周）。
         public float ChargedRevolutions => chargedRadians / (Mathf.PI * 2f);
         public Vector3 Velocity { get; private set; }
+        // 高速移動時の衝突判定に使う、直前のシミュレーション位置。
         public Vector3 PreviousPosition { get; private set; }
+        // 待機中と回復待ちでは敵弾を消せない。公転中と投擲中だけ有効。
         public bool CanHit => State == MotionState.Orbiting || State == MotionState.Flying;
+        // 順に目標の公転角度、強化用の累積角度、飛行／回復の残り秒数、前回の実角度。
+        // phaseとchargedRadiansはラジアン、previousAngleは度で保持する。
         private float phase, chargedRadians, remaining, previousAngle;
         private MaterialPropertyBlock properties;
 
+        // プレイヤー位置 anchor の後方に戻し、強さ1の待機状態からやり直す。
         public void ResetBalloon(Vector3 anchor)
         {
             State = MotionState.Ready;
@@ -42,6 +62,8 @@ namespace KazumaPrototype
             UpdateAppearance(anchor);
         }
 
+        // dt秒だけ進める。anchorはプレイヤー位置、heldは押下状態。
+        // 回復待ち→再出現、飛行→直進、それ以外→ばね付き公転の順に分岐する。
         public void Simulate(Vector3 anchor, Vector3 playerVelocity, bool held, float dt)
         {
             PreviousPosition = transform.position;
@@ -63,10 +85,11 @@ namespace KazumaPrototype
                 if (held) phase += (baseAngularSpeed + (Power - 1) * 1.4f + movement * 0.22f) * dt;
                 Vector3 radial = new Vector3(Mathf.Cos(phase), 0f, Mathf.Sin(phase));
                 Vector3 target = anchor + radial * orbitRadius;
-                // A spring follows the moving anchor; the ball keeps its world-space inertia.
+                // 目標へ引くばねと速度の減衰で動かす。プレイヤーが動いても風船の慣性を残す。
                 Velocity += ((target - transform.position) * spring - Velocity * damping) * dt;
                 transform.position += Velocity * dt;
                 Vector3 offset = transform.position - anchor;
+                // 紐が伸び切ったら最大長に戻し、さらに外へ伸ばそうとする相対速度だけを取り除く。
                 if (offset.magnitude > maximumTetherLength)
                 {
                     Vector3 normal = offset.normalized;
@@ -77,7 +100,8 @@ namespace KazumaPrototype
                 offset = transform.position - anchor;
                 float angle = Mathf.Atan2(offset.z, offset.x) * Mathf.Rad2Deg;
                 float turned = Mathf.DeltaAngle(previousAngle, angle) * Mathf.Deg2Rad;
-                // Only actual forward orbit while moving charges the three strength tiers.
+                // 押しながらプレイヤーが動いているときだけ、風船の実際の回転角度を強化に加える。
+                // 逆回転では進捗が減るが、すでに到達した強さの下限よりは減らさない。
                 if (held && movement > 0.15f && offset.sqrMagnitude > 0.25f)
                     chargedRadians = Mathf.Max((Power - 1) * Mathf.PI * 2f * revolutionsPerLevel, chargedRadians + turned);
                 previousAngle = angle;
@@ -86,19 +110,23 @@ namespace KazumaPrototype
             UpdateAppearance(anchor);
         }
 
+        // 公転中だけ投げられる。現在の風船速度にフリックを加算し、成功時はtrueを返す。
         public bool Launch(Vector3 flick)
         {
             if (State != MotionState.Orbiting) return false;
             Vector3 direction = Velocity + flick * flickInfluence;
+            // 速度がほぼゼロなら、公転軌道の接線方向を使って飛び出す。
             if (direction.sqrMagnitude < 0.1f)
                 direction = new Vector3(-Mathf.Sin(phase), 0f, Mathf.Cos(phase)) * baseAngularSpeed * orbitRadius;
             Velocity = Vector3.ClampMagnitude(direction, maximumLaunchSpeed);
             State = MotionState.Flying;
+            // 飛行の寿命は最大3秒。範囲外へ出た場合も回復待ちになる。
             remaining = 3f;
             tether.enabled = false;
             return true;
         }
 
+        // 命中などで使用済みにする。風船と紐を隠し、回復待ちへ移す。
         public void Consume()
         {
             State = MotionState.Recovering;
@@ -108,8 +136,10 @@ namespace KazumaPrototype
             tether.enabled = false;
         }
 
+        // 投擲速度からダメージを算出する。最低8、最高60で極端な値を抑える。
         public static float DamageAtSpeed(float speed) => Mathf.Clamp(speed * 2f, 8f, 60f);
 
+        // 強さに応じた色、速度に応じた伸び縮み、紐の表示位置を更新する。
         private void UpdateAppearance(Vector3 anchor)
         {
             if (properties == null) properties = new MaterialPropertyBlock();
@@ -117,12 +147,13 @@ namespace KazumaPrototype
             properties.SetColor("_BaseColor", color);
             properties.SetColor("_Color", color);
             body.SetPropertyBlock(properties);
-            // Squash/stretch is visual only: collision size stays predictable.
+            // 伸び縮みは見た目だけに適用する。当たり判定半径は一定に保つ。
             float stretch = Mathf.Clamp(Velocity.magnitude * 0.01f, 0f, 0.2f);
             body.transform.localScale = new Vector3(0.8f - stretch * 0.4f, 0.8f - stretch * 0.4f, 0.8f + stretch);
             if (Velocity.sqrMagnitude > 0.05f) body.transform.rotation = Quaternion.LookRotation(Velocity, Vector3.up);
             tether.enabled = State == MotionState.Ready || State == MotionState.Orbiting;
             if (!tether.enabled) return;
+            // 紐は9点で描き、中央を少し下げてたるみを表現する。紐自体に当たり判定はない。
             tether.positionCount = 9;
             for (int i = 0; i < 9; i++)
             {
