@@ -19,6 +19,33 @@ namespace KazumaPrototype
         [SerializeField] private float shotInterval = 1.5f;
         [SerializeField] private float releaseInvulnerability = 0.22f;
         [SerializeField] private float parryWindow = 0.12f;
+
+        // ============================================================
+        // Playerダメージ設定
+        // ============================================================
+        [Header("Player Damage Settings")]
+
+        [Tooltip("被弾後の無敵時間")]
+        [SerializeField] private float damageInvincibleTime = 2.0f;
+
+        [Tooltip("被弾時の点滅間隔")]
+        [SerializeField] private float blinkInterval = 0.1f;
+
+        [Tooltip("残機表示。Stock1 → Stock2 → Stock3の順番で登録する")]
+        [SerializeField] private GameObject[] stockObjects;
+
+        // 現在残っているStock数
+        private int currentStock;
+
+        // 被弾による無敵時間
+        private float damageInvincibleTimer;
+
+        // 点滅用タイマー
+        private float blinkTimer;
+
+        // GameOver状態か
+        private bool isGameOver;
+
         public RoundState State { get; private set; }
         public float BossHealth { get; private set; }
         public int ParryCount { get; private set; }
@@ -33,12 +60,33 @@ namespace KazumaPrototype
 
         private void Start()
         {
+            SoundManager.Instance.PlayBGM("BattleBGM");
             if (Application.platform == RuntimePlatform.Android) Screen.orientation = ScreenOrientation.Portrait;
             ResetRound();
         }
 
         public void ResetRound()
         {
+            // ============================================================
+            // PlayerのStockを初期化
+            // ============================================================
+            currentStock = stockObjects.Length;
+            damageInvincibleTimer = 0.0f;
+            blinkTimer = 0.0f;
+            isGameOver = false;
+
+            // Playerを操作可能状態に戻す
+            player.SetCanMove(true);
+
+            // Stockをすべて表示する
+            for (int i = 0; i < stockObjects.Length; i++)
+            {
+                if (stockObjects[i] != null)
+                {
+                    stockObjects[i].SetActive(true);
+                }
+            }
+
             ClearBullets();
             foreach (var pulse in pulses)
             {
@@ -63,6 +111,7 @@ namespace KazumaPrototype
         {
             gameCamera.orthographicSize = Mathf.Max(9f, 5f / Mathf.Max(gameCamera.aspect, 0.1f));
             float dt = Mathf.Min(Time.deltaTime, 0.1f);
+            UpdateDamageInvincibility(dt);
             UpdatePulses(dt);
             player.ReadInput(gameCamera, MovementBounds, dt);
             if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
@@ -96,12 +145,118 @@ namespace KazumaPrototype
             }
             previousPlayerPosition = currentPlayerPosition;
             if (State != RoundState.Playing) return;
-            player.SetColor(invincible > 0f ? Color.white : new Color(0.12f, 0.8f, 1f));
+
+            // 被弾無敵中ではない場合だけ、既存の色処理を行う
+            if (damageInvincibleTimer <= 0.0f && !isGameOver)
+            {
+                player.SetColor(
+                    invincible > 0.0f
+                        ? Color.white
+                        : new Color(0.12f, 0.8f, 1.0f)
+                );
+            }
+
             shotTimer -= dt;
             if (shotTimer <= 0f)
             {
                 FireWave();
                 shotTimer = shotInterval;
+            }
+        }
+
+        // ============================================================
+        // Player被弾処理
+        // ============================================================
+        private void DamagePlayer()
+        {
+            SoundManager.Instance.PlaySE("DamageSE");
+            // すでにGameOverなら何もしない
+            if (isGameOver)
+            {
+                return;
+            }
+
+            // 無敵時間中ならダメージを受けない
+            if (damageInvincibleTimer > 0.0f)
+            {
+                return;
+            }
+
+            // ---------------------------------------------------------
+            // Stockが残っている場合
+            // ---------------------------------------------------------
+            if (currentStock > 0)
+            {
+                // Stockを1つ減らす
+                currentStock--;
+
+                // 減ったStockのUIを非表示にする
+                if (currentStock < stockObjects.Length &&
+                    stockObjects[currentStock] != null)
+                {
+                    stockObjects[currentStock].SetActive(false);
+                }
+
+                // 被弾後の無敵時間開始
+                damageInvincibleTimer = damageInvincibleTime;
+
+                // 点滅タイマーを初期化
+                blinkTimer = 0.0f;
+
+                Debug.Log("Player Hit! Remaining Stock : " + currentStock);
+
+                return;
+            }
+
+            // ---------------------------------------------------------
+            // Stockが0の状態でさらに被弾した場合
+            // ---------------------------------------------------------
+            //GameOver();
+        }
+
+        // ============================================================
+        // 被弾後の無敵時間・点滅処理
+        // ============================================================
+        private void UpdateDamageInvincibility(float dt)
+        {
+            // 無敵時間が終了している場合
+            if (damageInvincibleTimer <= 0.0f)
+            {
+                // 通常色へ戻す
+                player.SetColor(new Color(0.12f, 0.8f, 1.0f));
+                return;
+            }
+
+            // 無敵時間を減らす
+            damageInvincibleTimer -= dt;
+
+            // 点滅タイマーを進める
+            blinkTimer += dt;
+
+            // 一定時間ごとに色を切り替える
+            if (blinkTimer >= blinkInterval)
+            {
+                blinkTimer = 0.0f;
+
+                // 残り時間から白と通常色を交互に切り替える
+                bool showWhite =
+                    Mathf.FloorToInt(damageInvincibleTimer / blinkInterval) % 2 == 0;
+
+                if (showWhite)
+                {
+                    player.SetColor(Color.white);
+                }
+                else
+                {
+                    player.SetColor(new Color(0.12f, 0.8f, 1.0f));
+                }
+            }
+
+            // 無敵時間終了
+            if (damageInvincibleTimer <= 0.0f)
+            {
+                damageInvincibleTimer = 0.0f;
+                player.SetColor(new Color(0.12f, 0.8f, 1.0f));
             }
         }
 
@@ -172,9 +327,20 @@ namespace KazumaPrototype
                 }
                 if (hitsPlayer)
                 {
+                    // Playerに当たった弾を削除
                     RemoveBullet(i);
-                    if (invincible <= 0f) EndRound(false);
-                    if (State != RoundState.Playing) return;
+
+                    // パリィなどによる無敵時間中ではない場合
+                    if (invincible <= 0.0f)
+                    {
+                        DamagePlayer();
+                    }
+
+                    // GameOverになった場合は処理終了
+                    if (isGameOver)
+                    {
+                        return;
+                    }
                     continue;
                 }
                 if (Mathf.Abs(bullet.transform.position.x) > 6f || Mathf.Abs(bullet.transform.position.z) > 10f)

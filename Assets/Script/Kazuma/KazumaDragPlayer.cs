@@ -21,8 +21,23 @@ namespace KazumaPrototype
         private float lastMovementTime;
         private MaterialPropertyBlock properties;
 
+        // falseになるとPlayerを操作できなくする。
+        // GameOver時などに使用する。
+        public bool CanMove { get; private set; } = true; // Playerの操作状態
+
         public void ReadInput(Camera camera, Rect bounds, float dt)
         {
+            // 操作禁止状態なら入力を受け付けない
+            if (!CanMove)
+            {
+                Velocity = Vector3.zero;
+                FlickVelocity = Vector3.zero;
+                IsHeld = false;
+                PressedThisFrame = false;
+                ReleasedThisFrame = false;
+                return;
+            }
+
             bool held = false;
             Vector2 position = default;
             int id = -1;
@@ -48,6 +63,24 @@ namespace KazumaPrototype
             FeedPointer(held, position, id, camera, bounds, dt);
         }
 
+        // ============================================================
+        // Playerの操作可否を変更
+        // ============================================================
+        public void SetCanMove(bool canMove)
+        {
+            CanMove = canMove;
+
+            // 操作禁止になった瞬間に移動情報もリセットする
+            if (!CanMove)
+            {
+                IsHeld = false;
+                PressedThisFrame = false;
+                ReleasedThisFrame = false;
+                Velocity = Vector3.zero;
+                FlickVelocity = Vector3.zero;
+                pointerId = -1;
+            }
+        }
         public void FeedPointer(bool held, Vector2 position, int id, Camera camera, Rect bounds, float dt)
         {
             PressedThisFrame = ReleasedThisFrame = false;
