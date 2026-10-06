@@ -164,7 +164,7 @@ MonoBehaviour:
   revolutionsPerLevel: 3
   flickInfluence: 0.8
   maximumLaunchSpeed: 30
-  recoveryDelay: 0.65
+  recoveryDelay: 1
   body: {fileID: 5409469915607215407}
   tether: {fileID: 2723330194963367888}
 --- !u!1 &8288494241977463214

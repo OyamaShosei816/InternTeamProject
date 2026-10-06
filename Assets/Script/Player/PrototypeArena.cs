@@ -56,8 +56,26 @@ namespace Prototype
         [SerializeField] private float parryWindow = 0.12f;
         // キューが弱点に当たった瞬間にゲーム進行を止める時間。実時間の秒数で指定する。
         [Header("キュー演出：弱点命中時の停止時間（秒）")]
-        [Tooltip("初期値0.08秒。長いほど命中の重さが強調されます。0で無効です。")]
-        [SerializeField, Range(0f, 0.3f)] private float weakPointHitStop = 0.08f;
+        [Tooltip("仕様値0.15秒。長いほど命中の重さが強調されます。0で無効です。")]
+        [SerializeField, Range(0f, 0.3f)] private float weakPointHitStop = 0.15f;
+        // 弱点命中時に、カメラを画面の横・縦方向へ揺らす最大距離。
+        [Header("弱点命中：カメラの揺れ幅")]
+        [Tooltip("ワールド単位。初期値0.12。0でカメラシェイクを無効にします。")]
+        [SerializeField, Min(0f)] private float cameraShakeStrength = 0.12f;
+        // ヒットストップ中も実時間で進む、カメラシェイクの表示時間。
+        [Header("弱点命中：カメラが揺れる時間（秒）")]
+        [Tooltip("初期値0.15秒。弱点命中と同時に揺れ始め、次第に収まります。")]
+        [SerializeField, Min(0f)] private float cameraShakeDuration = 0.15f;
+        // カメラシェイクの1秒あたりの振動回数。
+        [Header("弱点命中：カメラの揺れる速さ")]
+        [Tooltip("初期値35回／秒。大きいほど細かく素早く揺れます。")]
+        [SerializeField, Min(1f)] private float cameraShakeFrequency = 35f;
+        // カメラシェイクを開始してからの実経過秒数。
+        private float cameraShakeElapsed;
+        // 前回の描画用にカメラへ加えた位置のずれ。入力判定前と演出終了時に取り除く。
+        private Vector3 cameraShakeOffset;
+        // 弱点命中のシェイクが進行中か。ゲームの停止中も揺れの更新は継続する。
+        public bool IsCameraShaking { get; private set; }
         // ダメージが入らない胴体への命中に使う、短めの停止時間。
         [Header("キュー演出：胴体命中時の停止時間（秒）")]
         [Tooltip("初期値0.04秒。ボスの胴体にキューが当たったときに停止します。0で無効です。")]
@@ -66,6 +84,22 @@ namespace Prototype
         [Header("キュー演出：敵弾を消したときの停止時間（秒）")]
         [Tooltip("初期値0.025秒。連続命中では時間を足さず、長い方を採用します。0で無効です。")]
         [SerializeField, Range(0f, 0.3f)] private float bulletHitStop = 0.025f;
+        // 敵弾をキューで消した際、キューの外周から広がる輪の色。
+        [Header("弾消し演出：外円の色")]
+        [Tooltip("キューで敵弾を消した瞬間に表示する光の輪の色です。")]
+        [SerializeField] private Color bulletEraseColor = new Color(0.4f, 1f, 1f, 1f);
+        // 当たり判定の外周から、輪の半径を追加で広げる距離。
+        [Header("弾消し演出：外円が広がる距離")]
+        [Tooltip("ワールド単位。キューの当たり判定の外側へ、この距離だけ輪が広がります。")]
+        [SerializeField, Min(0f)] private float bulletEraseExpansion = 0.8f;
+        // 弾消しの輪が出現してから消えるまでの時間。ヒットストップ中は進めない。
+        [Header("弾消し演出：外円の表示時間（秒）")]
+        [Tooltip("初期値0.3秒。大きいほどゆっくり広がって消えます。0で演出を無効にします。")]
+        [SerializeField, Min(0f)] private float bulletEraseDuration = 0.3f;
+        // 弾消しの輪を描く線の太さ。
+        [Header("弾消し演出：外円の線の太さ")]
+        [Tooltip("ワールド単位。初期値0.09。大きくすると光の輪が太くなります。")]
+        [SerializeField, Min(0.001f)] private float bulletEraseWidth = 0.09f;
         // 現在ヒットストップ中か。停止中はゲーム進行と追加の命中判定を行わない。
         public bool IsHitStopped => hitStopRemaining > 0f;
         // ヒットストップの残り時間（実時間の秒数）。Time.timeScaleには影響されない。
@@ -106,6 +140,10 @@ namespace Prototype
             public Color color;
             // 拡大が終わったときの半径（ワールド単位）。
             public float radius;
+            // 出現時の半径。弾消しではキューの当たり判定の外周から描く。
+            public float startRadius;
+            // 円が完全に消えるまでの秒数。
+            public float duration;
         }
 
         // Androidでは縦画面に固定し、最初のラウンドを開始する。
@@ -118,6 +156,7 @@ namespace Prototype
         // 残った弾・演出を片付け、HP、タイマー、プレイヤーと風船を開始状態に戻す。
         public void ResetRound()
         {
+            StopCameraShake();
             CompleteHitStop();
             ClearBullets();
             // pulse：一覧から取り出した、今回処理する対象。
@@ -148,10 +187,18 @@ namespace Prototype
             AdvanceFrame(Time.deltaTime, Time.unscaledDeltaTime);
         }
 
+        // 入力・移動の処理後に描画用の揺れを加える。Time.timeScaleには依存しない。
+        private void LateUpdate()
+        {
+            AdvanceCameraShake(Time.unscaledDeltaTime);
+        }
+
         // deltaTimeはゲーム内の経過秒数、unscaledDeltaTimeは時間倍率に依存しない実経過秒数。
         // 実際のUpdateと検証で同じ進行処理を使い、停止中の移動や復帰を確認できるようにする。
         public void AdvanceFrame(float deltaTime, float unscaledDeltaTime)
         {
+            // 揺れをタッチ座標の変換に混ぜない。静止した指でプレイヤーが動くのを防ぐ。
+            RestoreCameraOffset();
             // 停止中もRキーで即座にリトライできる。
             if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
             {
@@ -272,15 +319,17 @@ namespace Prototype
                     if (bullet.Power == 3 && Sweep(bullet.PreviousPosition - playerFrom,
                         bullet.transform.position - playerTo, bullet.Radius + DragPlayer.Radius * player.Parameters.ParryRange, out _))
                     {
-                        ParryCount++;
-                        ClearBullets();
-                        parryRemaining = 0f;
-                        EmitPulse(playerTo, Color.cyan, 5f);
+                        ResolveParry(playerTo);
                         return;
                     }
                 }
             }
+            // 高速投擲が複数の弾を横切る場合も接触順に処理する。
+            // 格上の弾でキューが消滅した後、その奥の弾まで消してしまうことを防ぐ。
+            if (balloon.CanHit && bullets.Count > 1) bullets.Sort(CompareCueContactOrder);
             // 削除でリストの添字がずれても未処理の弾を飛ばさないよう、後ろから調べる。
+            // 同じ判定区間で複数の弾を消しても、外円を重ね描きしないための印。
+            bool emittedEraseEffect = false;
             // i：この繰り返しで処理する対象の番号。条件を満たす間、順番に更新する。
             for (int i = bullets.Count - 1; i >= 0; i--)
             {
@@ -291,17 +340,28 @@ namespace Prototype
                     bullet.transform.position - playerTo, bullet.Radius + DragPlayer.Radius, out float playerTime);
                 // 敵弾が水風船へ触れる時点（0～1）。未接触なら無限大のままにする。
                 float ballTime = float.PositiveInfinity;
-                // 水風船の強さが足りており、移動区間で敵弾に接触するか。
-                bool hitsBall = balloon.CanHit && balloon.Power >= bullet.Power && Sweep(
+                // 強さに関係なくキューへの接触を調べる。接触後にレベルの大小で結果を分ける。
+                bool hitsBall = balloon.CanHit && Sweep(
                     bullet.PreviousPosition - balloon.PreviousPosition,
                     bullet.transform.position - balloon.transform.position,
                     bullet.Radius + balloon.HitRadius, out ballTime);
                 // 紐は弾を消さない。風船本体がプレイヤーより先に弾へ当たったときだけ防ぐ。
                 if (hitsBall && (!hitsPlayer || ballTime <= playerTime))
                 {
-                    RemoveBullet(i);
-                    BeginHitStop(bulletHitStop);
-                    continue;
+                    if (balloon.Power >= bullet.Power)
+                    {
+                        // 同レベル以下なら敵弾を消し、キューは強さと飛行／公転を維持して貫通する。
+                        if (!emittedEraseEffect)
+                        {
+                            EmitBulletEraseEffect();
+                            emittedEraseEffect = true;
+                        }
+                        RemoveBullet(i);
+                        BeginHitStop(bulletHitStop);
+                        continue;
+                    }
+                    // 格上の敵弾は残り、キューだけが消える。敵弾のプレイヤー接触判定は継続する。
+                    balloon.Consume();
                 }
                 if (hitsPlayer)
                 {
@@ -315,8 +375,42 @@ namespace Prototype
             }
         }
 
+        // 後ろから削除するループに合わせ、接触が遅い弾から早い弾の順へ並べる。
+        private int CompareCueContactOrder(Bullet left, Bullet right)
+        {
+            return CueContactTime(right).CompareTo(CueContactTime(left));
+        }
+
+        // キューとbulletが移動区間で接触する時点。接触しない場合は最後に処理するため無限大を返す。
+        private float CueContactTime(Bullet bullet)
+        {
+            // 接触が起きる時点（区間の開始0～終了1）。強さでは絞り込まず格上も含める。
+            bool hits = Sweep(bullet.PreviousPosition - balloon.PreviousPosition,
+                bullet.transform.position - balloon.transform.position, bullet.Radius + balloon.HitRadius, out float time);
+            return hits ? time : float.PositiveInfinity;
+        }
+
+        // パリィ成功を確定する。距離や弾の強さを問わず、管理中の敵弾を即座に全消去する。
+        // 受付も終了させ、同じ投擲でパリィ回数や演出が重複しないようにする。
+        private void ResolveParry(Vector3 position)
+        {
+            ParryCount++;
+            parryRemaining = 0f;
+            ClearBullets();
+            EmitPulse(position, Color.cyan, 5f, DragPlayer.Radius * player.Parameters.ParryRange);
+        }
+
+        // 弾を打ち消した位置のキュー外周に輪を作る。強化やパッシブによる判定半径も反映する。
+        private void EmitBulletEraseEffect()
+        {
+            if (bulletEraseDuration <= 0f) return;
+            EmitPulse(balloon.transform.position, bulletEraseColor,
+                balloon.HitRadius + Mathf.Max(0f, bulletEraseExpansion), balloon.HitRadius,
+                bulletEraseDuration, Mathf.Max(0.001f, bulletEraseWidth), "Bullet erase outer ring");
+        }
+
         // 投擲中の風船だけボスに当たる。弱点と胴体のうち先に接触した方を採用する。
-        // 弱点なら速度に応じたダメージ、胴体ならダメージなしで風船を消費する。
+        // 弱点ならキャラ攻撃力とレベルに応じたダメージ、胴体ならダメージなしで風船を消費する。
         public void CheckBossHit()
         {
             if (IsHitStopped) return;
@@ -332,6 +426,7 @@ namespace Prototype
                 BossHealth = Mathf.Max(0f, BossHealth - balloon.CurrentDamage);
                 EmitPulse(weakPoint.position, Color.yellow, 1.6f);
                 StopOnBalloonImpact(weakPointHitStop);
+                BeginCameraShake();
                 Debug.Log($"Prototype: weak point hit. Boss HP {BossHealth:0}/{bossMaxHealth:0}", this);
                 if (BossHealth <= 0f) EndRound(true);
             }
@@ -376,6 +471,7 @@ namespace Prototype
         // 無効化・シーン移動で停止や投擲予約を持ち越さないようにする。
         private void OnDisable()
         {
+            StopCameraShake();
             CompleteHitStop();
             if (player != null) player.TryConsumeBufferedRelease(out _);
         }
@@ -428,12 +524,20 @@ namespace Prototype
             for (int i = bullets.Count - 1; i >= 0; i--) RemoveBullet(i);
         }
 
-        // 指定位置に広がる円を作る。radiusは最終半径で、同時表示は8個まで。
-        private void EmitPulse(Vector3 position, Color color, float radius)
+        // positionを中心にstartRadiusからradiusへ広がる円を、duration秒間表示する。
+        // widthは線の太さ、effectNameはHierarchyで演出を識別する名前。同時表示は8個まで。
+        private void EmitPulse(Vector3 position, Color color, float radius, float startRadius = 0.2f,
+            float duration = 0.45f, float width = 0.07f, string effectName = "Gameplay pulse")
         {
-            if (pulses.Count >= 8) return;
+            // 上限時は古い輪を終了し、新しく起きた弾消しやパリィの演出を必ず表示する。
+            if (pulses.Count >= 8)
+            {
+                pulses[0].line.gameObject.SetActive(false);
+                Destroy(pulses[0].line.gameObject);
+                pulses.RemoveAt(0);
+            }
             // 円形エフェクト用に作る一時的なGameObject。
-            var go = new GameObject("Gameplay pulse");
+            var go = new GameObject(effectName);
             go.transform.SetParent(transform);
             go.transform.position = position;
             // 線を表示するLineRenderer。
@@ -442,18 +546,64 @@ namespace Prototype
             line.useWorldSpace = false;
             line.loop = true;
             line.positionCount = 40;
-            line.widthMultiplier = 0.07f;
+            line.widthMultiplier = width;
             line.startColor = line.endColor = color;
             // i：この繰り返しで処理する対象の番号。条件を満たす間、順番に更新する。
             for (int i = 0; i < 40; i++)
             {
                 // 円周上の配置に使用する角度（ラジアン）。
                 float angle = i * Mathf.PI * 2f / 40f;
-                line.SetPosition(i, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * 0.2f);
+                line.SetPosition(i, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * startRadius);
             }
-            pulses.Add(new Pulse { line = line, color = color, radius = radius });
+            pulses.Add(new Pulse { line = line, color = color, radius = radius,
+                startRadius = startRadius, duration = Mathf.Max(0.001f, duration) });
         }
-        // 円を0.45秒で拡大・暗くし、寿命を迎えたら削除する。
+
+        // 弱点命中の瞬間に揺れを開始する。古い位置のずれを残さず、連続命中では演出を更新する。
+        private void BeginCameraShake()
+        {
+            StopCameraShake();
+            if (gameCamera == null || cameraShakeStrength <= 0f || cameraShakeDuration <= 0f) return;
+            IsCameraShaking = true;
+            cameraShakeElapsed = 0f;
+            AdvanceCameraShake(0f);
+        }
+
+        // unscaledDeltaTime秒だけ揺れを進める。ヒットストップ中も減衰し、終了時は元の位置へ戻す。
+        public void AdvanceCameraShake(float unscaledDeltaTime)
+        {
+            RestoreCameraOffset();
+            if (!IsCameraShaking || gameCamera == null) return;
+            cameraShakeElapsed += Mathf.Max(0f, unscaledDeltaTime);
+            if (cameraShakeDuration <= 0f || cameraShakeElapsed >= cameraShakeDuration)
+            {
+                StopCameraShake();
+                return;
+            }
+            // 演出終盤ほど小さくする揺れ幅。ゲーム内の判定位置は動かさない。
+            float amplitude = cameraShakeStrength * (1f - cameraShakeElapsed / cameraShakeDuration);
+            // 時間から決まる振動の位相。乱数を使わず、検証時も同じ揺れを再現できる。
+            float phase = cameraShakeElapsed * Mathf.PI * 2f * cameraShakeFrequency;
+            cameraShakeOffset = (gameCamera.transform.right * Mathf.Cos(phase)
+                + gameCamera.transform.up * Mathf.Cos(phase * 0.73f + 1f)) * amplitude;
+            gameCamera.transform.position += cameraShakeOffset;
+        }
+
+        // 最後に加えた描画用のずれだけを取り除き、カメラ本来の位置を保持する。
+        private void RestoreCameraOffset()
+        {
+            if (gameCamera != null) gameCamera.transform.position -= cameraShakeOffset;
+            cameraShakeOffset = Vector3.zero;
+        }
+
+        // リトライ、無効化、揺れ終了で呼ぶ後片付け。カメラのずれを次のラウンドに持ち越さない。
+        private void StopCameraShake()
+        {
+            RestoreCameraOffset();
+            IsCameraShaking = false;
+            cameraShakeElapsed = 0f;
+        }
+        // 円を指定した表示時間で拡大・暗くし、寿命を迎えたら即座に非表示にして削除する。
         private void UpdatePulses(float dt)
         {
             // i：この繰り返しで処理する対象の番号。条件を満たす間、順番に更新する。
@@ -463,9 +613,10 @@ namespace Prototype
                 var pulse = pulses[i];
                 pulse.age += dt;
                 // エフェクトの寿命に対する経過割合。1になると削除する。
-                float t = pulse.age / 0.45f;
+                float t = pulse.age / pulse.duration;
                 if (t >= 1f)
                 {
+                    pulse.line.gameObject.SetActive(false);
                     Destroy(pulse.line.gameObject);
                     pulses.RemoveAt(i);
                     continue;
@@ -479,7 +630,7 @@ namespace Prototype
                 {
                     // 円周上の配置に使用する角度（ラジアン）。
                     float angle = j * Mathf.PI * 2f / 40;
-                    pulse.line.SetPosition(j, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Lerp(0.2f, pulse.radius, t));
+                    pulse.line.SetPosition(j, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Lerp(pulse.startRadius, pulse.radius, t));
                 }
             }
         }

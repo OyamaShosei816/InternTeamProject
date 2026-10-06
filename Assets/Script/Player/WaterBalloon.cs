@@ -43,8 +43,8 @@ namespace Prototype
         [SerializeField] private float maximumLaunchSpeed = 30f;
         // 命中・寿命切れから再出現までの待ち時間（秒）。
         [Header("再使用：水風船が戻るまでの秒数")]
-        [Tooltip("命中または飛行終了から再出現するまでの待ち時間。小さいほど早く再使用できます。")]
-        [SerializeField] private float recoveryDelay = 0.65f;
+        [Tooltip("初期値1秒。消滅してからプレイヤーの上方へ再出現するまでの時間。再生産速度の倍率で短縮されます。")]
+        [SerializeField, Min(0f)] private float recoveryDelay = 1f;
         // 色や形を表示する本体のRenderer。
         [Header("水風船の見た目：表示用Renderer")]
         [Tooltip("水風船Prefab内の球のRendererを設定します。色変更と伸び縮みに使います。")]
@@ -88,17 +88,17 @@ namespace Prototype
         // 共有マテリアルを変えず、対象だけの色を指定するためのデータ。
         private MaterialPropertyBlock properties;
 
-        // プレイヤー位置 anchor の後方に戻し、強さ1の待機状態からやり直す。
+        // プレイヤー位置anchorの画面上方（ワールド+Z）へ戻し、強さ1の待機状態からやり直す。
         public void ResetBalloon(Vector3 anchor)
         {
             State = MotionState.Ready;
             Power = 1;
-            phase = -Mathf.PI / 2f;
+            phase = Mathf.PI / 2f;
             chargedRadians = 0f;
             Velocity = Vector3.zero;
-            transform.position = anchor + Vector3.back * orbitRadius;
+            transform.position = anchor + Vector3.forward * orbitRadius;
             PreviousPosition = transform.position;
-            previousAngle = -90f;
+            previousAngle = 90f;
             body.enabled = true;
             UpdateAppearance(anchor);
         }
@@ -182,6 +182,8 @@ namespace Prototype
         // 命中などで使用済みにする。風船と紐を隠し、回復待ちへ移す。
         public void Consume()
         {
+            // 同じ消滅への重複通知で復活までの時間を延ばさない。
+            if (State == MotionState.Recovering) return;
             State = MotionState.Recovering;
             remaining = recoveryDelay;
             Velocity = Vector3.zero;
@@ -189,18 +191,15 @@ namespace Prototype
             tether.enabled = false;
         }
 
-        // 投擲速度からダメージを算出する。最低8、最高60で極端な値を抑える。
-        public static float DamageAtSpeed(float speed) => Mathf.Clamp(speed * 2f, 8f, 60f);
-
-        // 現在の投擲速度に基づくダメージへ、所有者の攻撃力倍率を掛ける。
-        public float CurrentDamage => DamageAtSpeed(Velocity.magnitude) * Parameters.Attack;
+        // 仕様確定値：Lv.1はキャラの攻撃力、Lv.2とLv.3は2倍。速度による追加補正は行わない。
+        public float CurrentDamage => Parameters.AttackPower * (Power == 1 ? 1f : 2f);
 
         // 強さに応じた色、速度に応じた伸び縮み、紐の表示位置を更新する。
         private void UpdateAppearance(Vector3 anchor)
         {
             if (properties == null) properties = new MaterialPropertyBlock();
-            // 強さ1は緑、2は黄、3は紫で表示するための色。
-            Color color = Power == 1 ? new Color(0.25f, 1f, 0.3f) : Power == 2 ? new Color(1f, 0.8f, 0.1f) : new Color(1f, 0.25f, 0.85f);
+            // 仕様書の色分け：Lv.1は青、Lv.2はオレンジ、Lv.3は紫。
+            Color color = Power == 1 ? new Color(0.1f, 0.35f, 1f) : Power == 2 ? new Color(1f, 0.5f, 0f) : new Color(0.65f, 0f, 1f);
             properties.SetColor("_BaseColor", color);
             properties.SetColor("_Color", color);
             body.SetPropertyBlock(properties);
