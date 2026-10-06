@@ -1,10 +1,10 @@
 using UnityEngine;
 
-namespace KazumaPrototype
+namespace Prototype
 {
     // 水風船の公転、回転による強化、投擲、回復と見た目を管理する。
     // Arena が細かい時間刻みで Simulate を呼び、衝突時は Consume で回復待ちにする。
-    public sealed class KazumaWaterBalloon : MonoBehaviour
+    public sealed class WaterBalloon : MonoBehaviour
     {
         // Ready: 待機／Orbiting: 押している間の公転／Flying: 投擲中／Recovering: 再出現待ち。
         public enum MotionState { Ready, Orbiting, Flying, Recovering }
@@ -58,14 +58,14 @@ namespace KazumaPrototype
         // キャラクター性能を反映した現在の当たり判定半径（ワールド単位）。
         public float HitRadius => Radius * Parameters.CueHitRange;
         // 所有者の性能。Arenaからプレイヤーと同じインスタンスを渡す。
-        private KazumaPlayerParameters parameters = new KazumaPlayerParameters();
+        private PlayerParameters parameters = new PlayerParameters();
         // 単体で配置された風船でも初期性能で動作するための参照。
-        private KazumaPlayerParameters Parameters => parameters;
+        private PlayerParameters Parameters => parameters;
 
         // ownerParametersは所有者の共通性能。参照を共有し、スキル変更をすぐ反映する。
-        public void SetPlayerParameters(KazumaPlayerParameters ownerParameters)
+        public void SetPlayerParameters(PlayerParameters ownerParameters)
         {
-            parameters = ownerParameters ?? new KazumaPlayerParameters();
+            parameters = ownerParameters ?? new PlayerParameters();
         }
         // 待機・公転・飛行・回復待ちのうち、現在の水風船の状態。
         public MotionState State { get; private set; }
@@ -148,10 +148,11 @@ namespace KazumaPrototype
                 offset = transform.position - anchor;
                 // プレイヤーから見た水風船の現在の角度（度）。
                 float angle = Mathf.Atan2(offset.z, offset.x) * Mathf.Rad2Deg;
-                // 前回から実際に回った角度（ラジアン）。逆回転なら負になる。
-                float turned = Mathf.DeltaAngle(previousAngle, angle) * Mathf.Deg2Rad;
+                // 前回から実際に回った角度の大きさ（ラジアン）。
+                // 右回りは角度差が負になるため、絶対値を使って左右どちらも強化に加える。
+                float turned = Mathf.Abs(Mathf.DeltaAngle(previousAngle, angle)) * Mathf.Deg2Rad;
                 // 押しながらプレイヤーが動いているときだけ、風船の実際の回転角度を強化に加える。
-                // 逆回転では進捗が減るが、すでに到達した強さの下限よりは減らさない。
+                // 途中で回転方向を変えても、それまでの強化進捗は減らさない。
                 if (held && movement > 0.15f && offset.sqrMagnitude > 0.25f)
                     chargedRadians = Mathf.Max((Power - 1) * Mathf.PI * 2f * revolutionsPerLevel, chargedRadians + turned * Parameters.CueGrowth);
                 previousAngle = angle;

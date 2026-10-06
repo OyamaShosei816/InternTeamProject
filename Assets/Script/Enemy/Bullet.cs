@@ -1,10 +1,10 @@
 using UnityEngine;
 
-namespace KazumaPrototype
+namespace Prototype
 {
     // 敵弾1個の強さ・移動・見た目を管理する。
-    // 更新と当たり判定は KazumaPrototypeArena がまとめて行うため、このクラスには Update を置かない。
-    public sealed class KazumaBullet : MonoBehaviour
+    // 更新と当たり判定は PrototypeArena がまとめて行うため、このクラスには Update を置かない。
+    public sealed class Bullet : MonoBehaviour
     {
         // 弾の表示部分。Prefab作成時にBuilderから設定する。
         [Header("敵弾の見た目：表示用Renderer")]

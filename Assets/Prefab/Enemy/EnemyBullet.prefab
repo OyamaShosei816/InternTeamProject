@@ -134,5 +134,5 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 23414ab463a49594d9fb58ebc265dad7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaBullet
+  m_EditorClassIdentifier: Assembly-CSharp::Prototype.Bullet
   body: {fileID: 1282310368794359955}

@@ -6,25 +6,28 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
-namespace KazumaPrototype.Editor
+namespace Prototype.Editor
 {
-    // Unityエディター専用。Tools/Kazumaメニューから試作シーン・Prefab・マテリアルを再生成する。
+    // Unityエディター専用。Tools/Prototypeメニューから試作シーン・Prefab・マテリアルを再生成する。
     // 既存の生成用ルートを置き換え、カメラ設定と保存済みアセットも更新するため、手動編集後の実行には注意。
-    public static class KazumaPrototypeBuilder
+    public static class PrototypeBuilder
     {
-        // 生成先の固定パス。ScenePathのシーンは事前に存在している必要がある。
-        public const string ScenePath = "Assets/Scenes/Kazuma.unity";
-        // 自動生成するPrefabの保存先フォルダー。
-        private const string PrefabPath = "Assets/Prefab/Kazuma/";
+        // シーンのGUIDから現在の保存先を取得する。シーン名や配置フォルダーが変わっても参照を維持する。
+        public static string ScenePath => AssetDatabase.GUIDToAssetPath("b7d5ff132af3d1f409ef111362d91bda");
+        // プレイヤーとキューのPrefabを保存する既存フォルダー。
+        private const string PlayerPrefabPath = "Assets/Prefab/Player/";
+        // 敵弾のPrefabを保存する既存フォルダー。
+        private const string EnemyPrefabPath = "Assets/Prefab/Enemy/";
         // 自動生成するマテリアルの保存先フォルダー。
-        private const string MaterialPath = "Assets/Materials/Kazuma/";
+        private const string MaterialPath = "Assets/Materials/prototype/";
 
         // 再生成の入口。通常実行では編集中シーンの保存確認を表示してから進む。
-        [MenuItem("Tools/Kazuma/Rebuild gameplay prototype")]
+        [MenuItem("Tools/Prototype/Rebuild gameplay prototype")]
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-            Directory.CreateDirectory(PrefabPath);
+            Directory.CreateDirectory(PlayerPrefabPath);
+            Directory.CreateDirectory(EnemyPrefabPath);
             Directory.CreateDirectory(MaterialPath);
             AssetDatabase.Refresh();
             // 生成対象として開いたシーン。
@@ -32,7 +35,7 @@ namespace KazumaPrototype.Editor
             // 前回このツールで作ったルートだけ削除し、同名のゲーム部分が重複しないようにする。
             // root：一覧から取り出した、今回処理する対象。
             foreach (var root in scene.GetRootGameObjects())
-                if (root.name == "Kazuma Gameplay Prototype") UnityEngine.Object.DestroyImmediate(root);
+                if (root.name == "Gameplay Prototype") UnityEngine.Object.DestroyImmediate(root);
             // MainCameraタグのカメラを真上から見下ろす平行投影に設定する。
             Camera camera = Camera.main;
             camera.transform.SetPositionAndRotation(new Vector3(0, 20, 0), Quaternion.Euler(90, 0, 0));
@@ -62,10 +65,10 @@ namespace KazumaPrototype.Editor
             // プレイヤーの表示用の球。
             var playerBody = Sphere("Body", playerRoot.transform, Vector3.zero, Vector3.one * 0.68f, playerMaterial);
             // 操作するプレイヤーの入力・移動コンポーネント。
-            var player = playerRoot.AddComponent<KazumaDragPlayer>();
+            var player = playerRoot.AddComponent<DragPlayer>();
             Set(player, "body", playerBody);
             // 保存したプレイヤーPrefabのアセット。
-            GameObject playerPrefab = PrefabUtility.SaveAsPrefabAsset(playerRoot, PrefabPath + "Player.prefab");
+            GameObject playerPrefab = PrefabUtility.SaveAsPrefabAsset(playerRoot, PlayerPrefabPath + "Player 1.prefab");
             UnityEngine.Object.DestroyImmediate(playerRoot);
 
             // 水風船Prefab：球、紐の線、動作を管理するコンポーネントを組み合わせる。
@@ -80,11 +83,11 @@ namespace KazumaPrototype.Editor
             line.useWorldSpace = true;
             line.numCapVertices = 3;
             // 水風船の移動・投擲を管理するコンポーネント。
-            var balloon = ballRoot.AddComponent<KazumaWaterBalloon>();
+            var balloon = ballRoot.AddComponent<WaterBalloon>();
             Set(balloon, "body", ballBody);
             Set(balloon, "tether", line);
             // 保存した水風船Prefabのアセット。
-            GameObject balloonPrefab = PrefabUtility.SaveAsPrefabAsset(ballRoot, PrefabPath + "WaterBalloon.prefab");
+            GameObject balloonPrefab = PrefabUtility.SaveAsPrefabAsset(ballRoot, PlayerPrefabPath + "WaterBalloon.prefab");
             UnityEngine.Object.DestroyImmediate(ballRoot);
 
             // 敵弾Prefab：出現後の位置・強さ・色はArenaから初期化される。
@@ -92,16 +95,16 @@ namespace KazumaPrototype.Editor
             // 敵弾の表示用の球。
             var bulletBody = Sphere("Body", bulletRoot.transform, Vector3.zero, Vector3.one, ballMaterial);
             // 生成または判定対象となる敵弾。
-            var bullet = bulletRoot.AddComponent<KazumaBullet>();
+            var bullet = bulletRoot.AddComponent<Bullet>();
             Set(bullet, "body", bulletBody);
             // 保存した敵弾Prefabのアセット。
-            GameObject bulletPrefab = PrefabUtility.SaveAsPrefabAsset(bulletRoot, PrefabPath + "EnemyBullet.prefab");
+            GameObject bulletPrefab = PrefabUtility.SaveAsPrefabAsset(bulletRoot, EnemyPrefabPath + "EnemyBullet.prefab");
             UnityEngine.Object.DestroyImmediate(bulletRoot);
 
             // 保存したPrefabをシーンへ配置し、ボスと弱点を作ってArenaに各参照を渡す。
-            var gameplay = new GameObject("Kazuma Gameplay Prototype");
+            var gameplay = new GameObject("Gameplay Prototype");
             // ゲーム進行と当たり判定を管理するコンポーネント。
-            var arena = gameplay.AddComponent<KazumaPrototypeArena>();
+            var arena = gameplay.AddComponent<PrototypeArena>();
             // シーン内へ配置したプレイヤーPrefabの実体。
             var playerInstance = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, gameplay.transform);
             playerInstance.transform.position = new Vector3(0f, 0.65f, -4.5f);
@@ -124,9 +127,9 @@ namespace KazumaPrototype.Editor
             // ボスのダメージ受付位置を表す弱点のTransform。
             var weakPoint = Sphere("Weak Point", boss, new Vector3(0f, 0f, -1.15f), Vector3.one * 1.1f, weakMaterial).transform;
             Set(arena, "gameCamera", camera);
-            Set(arena, "player", playerInstance.GetComponent<KazumaDragPlayer>());
-            Set(arena, "balloon", ballInstance.GetComponent<KazumaWaterBalloon>());
-            Set(arena, "bulletPrefab", bulletPrefab.GetComponent<KazumaBullet>());
+            Set(arena, "player", playerInstance.GetComponent<DragPlayer>());
+            Set(arena, "balloon", ballInstance.GetComponent<WaterBalloon>());
+            Set(arena, "bulletPrefab", bulletPrefab.GetComponent<Bullet>());
             Set(arena, "boss", boss);
             Set(arena, "weakPoint", weakPoint);
             Set(arena, "effectMaterial", pulseMaterial);
@@ -134,7 +137,7 @@ namespace KazumaPrototype.Editor
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
-            Debug.Log("Kazuma prototype scene and prefabs saved.");
+            Debug.Log("Prototype prototype scene and prefabs saved.");
         }
 
         // 指定の親に、表示用の球を作成する。positionとscaleは親に対するローカル値。

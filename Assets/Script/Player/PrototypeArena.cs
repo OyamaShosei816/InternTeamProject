@@ -2,34 +2,34 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace KazumaPrototype
+namespace Prototype
 {
-    // 繧ｲ繝ｼ繝騾ｲ陦後・蜿ｸ莉､蝪斐ょ・蜉帚・豌ｴ鬚ｨ闊ｹ縺ｮ遘ｻ蜍補・蠑ｾ縺ｮ陦晉ｪ≫・繝懊せ蛻､螳壹・鬆・↓譖ｴ譁ｰ縺吶ｋ縲・
-    // 蠑ｾ蟷輔∵兜謫ｲ逶ｴ蠕後・辟｡謨ｵ・上ヱ繝ｪ繧｣縲∝享謨励√Μ繝医Λ繧､縲∝・蠖｢繧ｨ繝輔ぉ繧ｯ繝医ｂ縺薙％縺ｧ邂｡逅・☆繧九・
-    public sealed class KazumaPrototypeArena : MonoBehaviour
+	// 蜈･蜉帙∵ｰｴ鬚ｨ闊ｹ縺ｮ遘ｻ蜍輔∝ｼｾ縺ｮ陦晉ｪ√√・繧ｹ蛻､螳壹ｒ鬆・分縺ｫ譖ｴ譁ｰ縺吶ｋ縲・
+    // 繧ｲ繝ｼ繝騾ｲ陦後→繝偵ャ繝医せ繝医ャ繝励√し繧ｦ繝ｳ繝峨↑縺ｩ繧堤ｮ｡逅・☆繧九・
+    public sealed class PrototypeArena : MonoBehaviour
     {
         // 繝励Ξ繧､荳ｭ繝ｻ繧ｯ繝ｪ繧｢繝ｻ螟ｱ謨励・3迥ｶ諷九らｵゆｺ・ｾ後・荳螳壽凾髢薙ｒ鄂ｮ縺・※謚ｼ縺礼峩縺吶→蜀埼幕縺ｧ縺阪ｋ縲・
         public enum RoundState { Playing, Cleared, Failed }
-        // 画面表示と、タッチ位置からの移動計算に使用するカメラ。
-        [Header("画面：ゲーム用カメラ")]
-        [Tooltip("プレイ画面のCameraを設定します。")][SerializeField] private Camera gameCamera;
-
-        // プレイヤーの入力と移動を管理するコンポーネント。
         [Header("操作対象：プレイヤー")]
-        [Tooltip("シーン内のプレイヤーに付いているKazumaDragPlayerを設定します。")]
-        [SerializeField] private KazumaDragPlayer player;
+        [Tooltip("シーン内のプレイヤーのDragPlayerを設定します。")]
+        [SerializeField] private DragPlayer player;
 
-        // 水風船の移動と投擲を管理するコンポーネント。
+        // 表示と、タッチ座標の変換に使用するカメラ。
+        [Header("画面：ゲーム用カメラ")]
+        [Tooltip("ゲーム画面を映すCameraを設定します。")]
+        [SerializeField] private Camera gameCamera;
+
+        // 豌ｴ鬚ｨ闊ｹ縺ｮ遘ｻ蜍輔・謚墓憧繧堤ｮ｡逅・☆繧九さ繝ｳ繝昴・繝阪Φ繝医・
         [Header("攻撃対象：水風船")]
-        [Tooltip("シーン内の水風船に付いているKazumaWaterBalloonを設定します。")]
-        [SerializeField] private KazumaWaterBalloon balloon;
+        [Tooltip("シーン内の水風船のWaterBalloonを設定します。")]
+        [SerializeField] private WaterBalloon balloon;
 
-        // 発射時に複製する敵弾のPrefab。
+        // 逋ｺ蟆・凾縺ｫ隍・｣ｽ縺吶ｋ謨ｵ蠑ｾ縺ｮPrefab縲・
         [Header("敵の攻撃：弾Prefab")]
-        [Tooltip("敵弾Prefabに付いているKazumaBulletを設定します。")]
-        [SerializeField] private KazumaBullet bulletPrefab;
+        [Tooltip("敵弾PrefabのBulletを設定します。")]
+        [SerializeField] private Bullet bulletPrefab;
 
-        // ボス本体との接触判定と、クリア時の非表示に使用する。
+        // 繝懊せ譛ｬ菴薙・謗･隗ｦ蛻､螳壹→縲√け繝ｪ繧｢譎ゅ・髱櫁｡ｨ遉ｺ縺ｫ菴ｿ逕ｨ縺吶ｋ縲・
         [Header("敵の配置：ボス本体")]
         [Tooltip("シーン内のボス本体のTransformを設定します。")]
         [SerializeField] private Transform boss;
@@ -59,34 +59,50 @@ namespace KazumaPrototype
         [Header("パリィ：投擲後の受付時間")]
         [Tooltip("投擲後にパリィが成立する受付時間です。単位は秒です。")]
         [SerializeField] private float parryWindow = 0.12f;
-
-        // ============================================================
-        // Playerダメージ設定
-        // ============================================================
+        // 繝励Ξ繧､繝､繝ｼ縺ｮ陲ｫ蠑ｾ繝ｻ谿区ｩ溯ｨｭ螳壹・
         [Header("Player Damage Settings")]
 
-        [Tooltip("被弾後の無敵時間")]
+        [Tooltip("被弾後の無敵時間です。単位は秒です。")]
         [SerializeField] private float damageInvincibleTime = 2.0f;
 
-        [Tooltip("被弾時の点滅間隔")]
+        [Tooltip("被弾時の点滅間隔です。単位は秒です。")]
         [SerializeField] private float blinkInterval = 0.1f;
 
-        [Tooltip("残機表示。Stock1 → Stock2 → Stock3の順番で登録する")]
+        [Tooltip("残機UIをStock1、Stock2、Stock3の順に登録します。")]
         [SerializeField] private GameObject[] stockObjects;
 
-        // 現在残っているStock数
+        // 迴ｾ蝨ｨ縺ｮ谿区ｩ滓焚縺ｨ縲∬｢ｫ蠑ｾ貍泌・縺ｮ迥ｶ諷九・
         private int currentStock;
-
-        // 被弾による無敵時間
         private float damageInvincibleTimer;
-
-        // 点滅用タイマー
         private float blinkTimer;
-
-        // GameOver状態か
         private bool isGameOver;
 
-        // 迴ｾ蝨ｨ縺ｮ騾ｲ陦檎憾諷九・
+        // 蠑ｱ轤ｹ蜻ｽ荳ｭ譎ゅ・繝偵ャ繝医せ繝医ャ繝励・
+        [Header("ヒットストップ：弱点命中")]
+        [Tooltip("弱点命中時の停止時間です。単位は秒です。")]
+        [SerializeField, Range(0f, 0.3f)]
+        private float weakPointHitStop = 0.08f;
+
+        // 繝懊せ縺ｮ閭ｴ菴薙↓蜻ｽ荳ｭ縺励◆縺ｨ縺阪・繝偵ャ繝医せ繝医ャ繝励・
+        [Header("ヒットストップ：ボス本体命中")]
+        [Tooltip("ボス本体に命中したときの停止時間です。単位は秒です。")]
+        [SerializeField, Range(0f, 0.3f)]
+        private float bodyHitStop = 0.04f;
+
+        // 豌ｴ鬚ｨ闊ｹ縺梧雰蠑ｾ繧呈ｶ医＠縺溘→縺阪・繝偵ャ繝医せ繝医ャ繝励・
+        [Header("ヒットストップ：敵弾消去")]
+        [Tooltip("水風船が敵弾を消したときの停止時間です。単位は秒です。")]
+        [SerializeField, Range(0f, 0.3f)]
+        private float bulletHitStop = 0.025f;
+
+        // 谿九ｊ譎る俣縺後≠繧矩俣縺ｯ縲√ヲ繝・ヨ繧ｹ繝医ャ繝嶺ｸｭ縺ｨ縺励※謇ｱ縺・・
+        public bool IsHitStopped => hitStopRemaining > 0f;
+        private float hitStopRemaining;
+
+        // 蜻ｽ荳ｭ縺励◆豌ｴ鬚ｨ闊ｹ繧偵∝●豁｢邨ゆｺ・ｾ後↓豸郁ｲｻ縺吶ｋ縺溘ａ縺ｮ莠育ｴ・・
+        private bool consumeBalloonAfterHitStop;
+
+        // 迴ｾ蝨ｨ縺ｮ繧ｲ繝ｼ繝騾ｲ陦檎憾諷九・
         public RoundState State { get; private set; }
         // 繝懊せ縺ｮ谿九ｊHP縲・縺ｫ縺ｪ繧九→繧ｯ繝ｪ繧｢縲・
         public float BossHealth { get; private set; }
@@ -97,7 +113,7 @@ namespace KazumaPrototype
         // 繝励Ξ繧､繝､繝ｼ荳ｭ蠢・・遘ｻ蜍慕ｯ・峇縲３ect縺ｮ讓ｪ霆ｸ縺ｯ繝ｯ繝ｼ繝ｫ繝厩縲∫ｸｦ霆ｸ縺ｯ繝ｯ繝ｼ繝ｫ繝瓜縺ｫ蟇ｾ蠢懊☆繧九・
         public static Rect MovementBounds => Rect.MinMaxRect(-4.1f, -7.5f, 4.1f, 3.7f);
         // 逕ｻ髱｢蜀・〒譖ｴ譁ｰ繝ｻ蛻､螳壹☆繧区雰蠑ｾ縺ｮ荳隕ｧ縲・
-        private readonly List<KazumaBullet> bullets = new List<KazumaBullet>();
+        private readonly List<Bullet> bullets = new List<Bullet>();
         // 陦ｨ遉ｺ荳ｭ縺ｮ蜀・ｽ｢繧ｨ繝輔ぉ繧ｯ繝医・荳隕ｧ縲・
         private readonly List<Pulse> pulses = new List<Pulse>();
         // 逋ｺ蟆・∪縺ｧ縺ｮ谿九ｊ遘呈焚縲∫┌謨ｵ縺ｮ谿九ｊ遘呈焚縲√ヱ繝ｪ繧｣縺ｮ谿九ｊ遘呈焚縲∫ｵゆｺ・ｾ後・邨碁℃遘呈焚縲・
@@ -156,6 +172,7 @@ namespace KazumaPrototype
                 }
             }
 
+            CompleteHitStop();
             ClearBullets();
             // pulse・壻ｸ隕ｧ縺九ｉ蜿悶ｊ蜃ｺ縺励◆縲∽ｻ雁屓蜃ｦ逅・☆繧句ｯｾ雎｡縲・
             foreach (var pulse in pulses)
@@ -182,18 +199,36 @@ namespace KazumaPrototype
         // 豈弱ヵ繝ｬ繝ｼ繝縺ｮ騾ｲ陦悟・逅・ゅ・繝ｬ繧､繝､繝ｼ蜈･蜉帙・1蝗櫁ｪｭ縺ｿ縲∫黄逅・噪縺ｪ遘ｻ蜍輔→陦晉ｪ√□縺醍ｴｰ蛻・喧縺吶ｋ縲・
         private void Update()
         {
-            // 逕ｻ髱｢縺檎ｸｦ髟ｷ縺ｧ繧ょｷｦ蜿ｳ縺ｮ繝励Ξ繧､鬆伜沺繧堤｢ｺ菫昴☆繧九ｈ縺・√き繝｡繝ｩ縺ｮ陦ｨ遉ｺ遽・峇繧貞ｺ・￡繧九・
-            gameCamera.orthographicSize = Mathf.Max(9f, 5f / Mathf.Max(gameCamera.aspect, 0.1f));
-            // 蜃ｦ逅・誠縺｡蠕後↓荳蠎ｦ縺ｫ螟ｧ縺阪￥蜍輔￥縺ｮ繧帝∩縺代ｋ縺溘ａ縲・繝輔Ξ繝ｼ繝縺ｧ騾ｲ繧√ｋ譎る俣繧・.1遘偵∪縺ｧ縺ｫ縺吶ｋ縲・
-            float dt = Mathf.Min(Time.deltaTime, 0.1f);
-            UpdateDamageInvincibility(dt);
-            UpdatePulses(dt);
-            player.ReadInput(gameCamera, MovementBounds, dt);
+            AdvanceFrame(Time.deltaTime, Time.unscaledDeltaTime);
+        }
+
+        // deltaTime縺ｯ繧ｲ繝ｼ繝蜀・・邨碁℃遘呈焚縲「nscaledDeltaTime縺ｯ譎る俣蛟咲紫縺ｫ萓晏ｭ倥＠縺ｪ縺・ｮ溽ｵ碁℃遘呈焚縲・
+        // 螳滄圀縺ｮUpdate縺ｨ讀懆ｨｼ縺ｧ蜷後§騾ｲ陦悟・逅・ｒ菴ｿ縺・∝●豁｢荳ｭ縺ｮ遘ｻ蜍輔ｄ蠕ｩ蟶ｰ繧堤｢ｺ隱阪〒縺阪ｋ繧医≧縺ｫ縺吶ｋ縲・
+        public void AdvanceFrame(float deltaTime, float unscaledDeltaTime)
+        {
+            // 蛛懈ｭ｢荳ｭ繧３繧ｭ繝ｼ縺ｧ蜊ｳ蠎ｧ縺ｫ繝ｪ繝医Λ繧､縺ｧ縺阪ｋ縲・
             if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
             {
                 ResetRound();
                 return;
             }
+            if (IsHitStopped)
+            {
+                // 蠎ｧ讓吶・蝓ｺ貅悶□縺第峩譁ｰ縺励※蠕ｩ蟶ｰ譎ゅ・繧ｸ繝｣繝ｳ繝励ｒ髦ｲ縺弱・屬縺励◆蜈･蜉帙・繝励Ξ繧､繝､繝ｼ蛛ｴ縺ｫ菫晏ｭ倥☆繧九・
+                player.ReadInput(gameCamera, MovementBounds, unscaledDeltaTime, freezeMovement: true);
+                AdvanceHitStop(unscaledDeltaTime);
+                return;
+            }
+            // 逕ｻ髱｢縺檎ｸｦ髟ｷ縺ｧ繧ょｷｦ蜿ｳ縺ｮ繝励Ξ繧､鬆伜沺繧堤｢ｺ菫昴☆繧九ｈ縺・√き繝｡繝ｩ縺ｮ陦ｨ遉ｺ遽・峇繧貞ｺ・￡繧九・
+            gameCamera.orthographicSize = Mathf.Max(9f, 5f / Mathf.Max(gameCamera.aspect, 0.1f));
+            // 蜃ｦ逅・誠縺｡蠕後↓荳蠎ｦ縺ｫ螟ｧ縺阪￥蜍輔￥縺ｮ繧帝∩縺代ｋ縺溘ａ縲・繝輔Ξ繝ｼ繝縺ｧ騾ｲ繧√ｋ譎る俣繧・.1遘偵∪縺ｧ縺ｫ縺吶ｋ縲・
+            float dt = Mathf.Clamp(deltaTime, 0f, 0.1f);
+            
+            // 陲ｫ蠑ｾ蠕後・辟｡謨ｵ譎る俣縺ｨ轤ｹ貊・ｒ譖ｴ譁ｰ縺吶ｋ縲・
+            UpdateDamageInvincibility(dt);
+            
+            UpdatePulses(dt);
+            player.ReadInput(gameCamera, MovementBounds, dt);
             if (State != RoundState.Playing)
             {
                 endTimer += dt;
@@ -202,7 +237,10 @@ namespace KazumaPrototype
                 else player.transform.position = previousPlayerPosition;
                 return;
             }
-            if (player.ReleasedThisFrame && balloon.Launch(player.FlickVelocity))
+            // bufferedRelease縺ｯ蛛懈ｭ｢荳ｭ縺ｮ謚墓憧莠育ｴ・・譛臥┌縲｜ufferedFlick縺ｯ縺昴・迸ｬ髢薙・騾溷ｺｦ縲・
+            // 莠育ｴ・′縺ゅｌ縺ｰ譛譁ｰ縺ｮ蜈･蜉帙ｈ繧雁━蜈医＠縲∝ｾｩ蟶ｰ譎ゅ↓1蝗槭□縺第兜縺偵ｋ縲・
+            bool bufferedRelease = player.TryConsumeBufferedRelease(out Vector3 bufferedFlick);
+            if ((bufferedRelease || player.ReleasedThisFrame) && balloon.Launch(bufferedRelease ? bufferedFlick : player.FlickVelocity))
                 BeginReleaseProtection();
             // 莉雁屓縺ｮ蜈･蜉帙ｒ蜿肴丐縺励◆繝励Ξ繧､繝､繝ｼ縺ｮ蛻ｰ驕比ｽ咲ｽｮ縲・
             Vector3 currentPlayerPosition = player.transform.position;
@@ -220,13 +258,15 @@ namespace KazumaPrototype
                 Vector3 to = Vector3.Lerp(previousPlayerPosition, currentPlayerPosition, (i + 1f) / steps);
                 balloon.Simulate(to, player.Velocity, player.IsHeld, step);
                 TickBullets(from, to, step);
-                if (State != RoundState.Playing) break;
+                if (State != RoundState.Playing || IsHitStopped) break;
                 CheckBossHit();
+                // 蜻ｽ荳ｭ縺励◆繝輔Ξ繝ｼ繝縺ｮ谿九ｊ縺ｮ邏ｰ蛻・喧蜃ｦ逅・ｂ豁｢繧√√く繝･繝ｼ縺碁ｲ縺ｿ邯壹￠繧九・繧帝亟縺舌・
+                if (IsHitStopped) break;
                 invincible = Mathf.Max(0f, invincible - step);
                 parryRemaining = Mathf.Max(0f, parryRemaining - step);
             }
             previousPlayerPosition = currentPlayerPosition;
-            if (State != RoundState.Playing) return;
+            if (State != RoundState.Playing || IsHitStopped) return;
 
             // 被弾無敵中ではない場合だけ、既存の色処理を行う
             if (damageInvincibleTimer <= 0.0f && !isGameOver)
@@ -377,7 +417,7 @@ namespace KazumaPrototype
         }
 
         // 蠑ｾ繧堤函謌舌＠縺ｦ邂｡逅・Μ繧ｹ繝医∈逋ｻ骭ｲ縺吶ｋ縲りｲ闕ｷ蟇ｾ遲悶→縺励※96蛟九ｒ荳企剞縺ｨ縺励∬ｶ・∴縺溘ｉnull繧定ｿ斐☆縲・
-        public KazumaBullet SpawnBullet(Vector3 position, Vector3 velocity, int power)
+        public Bullet SpawnBullet(Vector3 position, Vector3 velocity, int power)
         {
             if (bullets.Count >= 96) return null;
             // 逕滓・縺ｾ縺溘・蛻､螳壼ｯｾ雎｡縺ｨ縺ｪ繧区雰蠑ｾ縲・
@@ -390,6 +430,7 @@ namespace KazumaPrototype
         // 蠑ｾ繧帝ｲ繧√※陦晉ｪ√ｒ隗｣豎ｺ縺吶ｋ縲ＱlayerFrom/To縺ｯ縺薙・譎る俣蛹ｺ髢薙・繝励Ξ繧､繝､繝ｼ遘ｻ蜍募燕・丞ｾ後・菴咲ｽｮ縲・
         public void TickBullets(Vector3 playerFrom, Vector3 playerTo, float dt)
         {
+            if (IsHitStopped) return;
             // 騾壼ｸｸ縺ｮ陲ｫ蠑ｾ繧医ｊ蜈医↓繝代Μ繧｣繧貞愛螳壹☆繧九ょ女莉倅ｸｭ縺ｫ蠑ｷ縺・縺ｮ蠑ｾ縺ｸ謗･隗ｦ縺吶ｋ縺ｨ蜈ｨ蠑ｾ繧呈ｶ医☆縲・
             // i・壹％縺ｮ郢ｰ繧願ｿ斐＠縺ｧ蜃ｦ逅・☆繧句ｯｾ雎｡縺ｮ逡ｪ蜿ｷ縲よ擅莉ｶ繧呈ｺ縺溘☆髢薙・・分縺ｫ譖ｴ譁ｰ縺吶ｋ縲・
             for (int i = 0; i < bullets.Count; i++) bullets[i].Simulate(dt);
@@ -399,7 +440,7 @@ namespace KazumaPrototype
                 foreach (var bullet in bullets)
                 {
                     if (bullet.Power == 3 && Sweep(bullet.PreviousPosition - playerFrom,
-                        bullet.transform.position - playerTo, bullet.Radius + KazumaDragPlayer.Radius * player.Parameters.ParryRange, out _))
+                        bullet.transform.position - playerTo, bullet.Radius + DragPlayer.Radius * player.Parameters.ParryRange, out _))
                     {
                         ParryCount++;
                         if (SoundManager.Instance != null)
@@ -421,7 +462,7 @@ namespace KazumaPrototype
                 var bullet = bullets[i];
                 // 謨ｵ蠑ｾ縺後％縺ｮ遘ｻ蜍募玄髢薙〒繝励Ξ繧､繝､繝ｼ縺ｫ謗･隗ｦ縺吶ｋ縺九ＱlayerTime縺ｯ謗･隗ｦ譎らせ・・・・・峨・
                 bool hitsPlayer = Sweep(bullet.PreviousPosition - playerFrom,
-                    bullet.transform.position - playerTo, bullet.Radius + KazumaDragPlayer.Radius, out float playerTime);
+                    bullet.transform.position - playerTo, bullet.Radius + DragPlayer.Radius, out float playerTime);
                 // 謨ｵ蠑ｾ縺梧ｰｴ鬚ｨ闊ｹ縺ｸ隗ｦ繧後ｋ譎らせ・・・・・峨よ悴謗･隗ｦ縺ｪ繧臥┌髯仙､ｧ縺ｮ縺ｾ縺ｾ縺ｫ縺吶ｋ縲・
                 float ballTime = float.PositiveInfinity;
                 // 豌ｴ鬚ｨ闊ｹ縺ｮ蠑ｷ縺輔′雜ｳ繧翫※縺翫ｊ縲∫ｧｻ蜍募玄髢薙〒謨ｵ蠑ｾ縺ｫ謗･隗ｦ縺吶ｋ縺九・
@@ -433,6 +474,7 @@ namespace KazumaPrototype
                 if (hitsBall && (!hitsPlayer || ballTime <= playerTime))
                 {
                     RemoveBullet(i);
+                    BeginHitStop(bulletHitStop);
                     continue;
                 }
                 if (hitsPlayer)
@@ -462,7 +504,8 @@ namespace KazumaPrototype
         // 蠑ｱ轤ｹ縺ｪ繧蛾溷ｺｦ縺ｫ蠢懊§縺溘ム繝｡繝ｼ繧ｸ縲∬Χ菴薙↑繧峨ム繝｡繝ｼ繧ｸ縺ｪ縺励〒鬚ｨ闊ｹ繧呈ｶ郁ｲｻ縺吶ｋ縲・
         public void CheckBossHit()
         {
-            if (balloon.State != KazumaWaterBalloon.MotionState.Flying) return;
+            if (IsHitStopped) return;
+            if (balloon.State != WaterBalloon.MotionState.Flying) return;
             // 豌ｴ鬚ｨ闊ｹ縺悟ｼｱ轤ｹ縺ｫ謗･隗ｦ縺吶ｋ縺九ＸeakTime縺ｯ遘ｻ蜍募玄髢灘・縺ｮ譛蛻昴・謗･隗ｦ譎らせ・・・・・峨・
             bool weakHit = Sweep(balloon.PreviousPosition - weakPoint.position,
                 balloon.transform.position - weakPoint.position, balloon.HitRadius + 0.55f, out float weakTime);
@@ -477,8 +520,8 @@ namespace KazumaPrototype
                 }
                 BossHealth = Mathf.Max(0f, BossHealth - balloon.CurrentDamage);
                 EmitPulse(weakPoint.position, Color.yellow, 1.6f);
-                balloon.Consume();
-                Debug.Log($"Kazuma: weak point hit. Boss HP {BossHealth:0}/{bossMaxHealth:0}", this);
+                StopOnBalloonImpact(weakPointHitStop);
+                Debug.Log($"Prototype: weak point hit. Boss HP {BossHealth:0}/{bossMaxHealth:0}", this);
                 if (BossHealth <= 0f) EndRound(true);
             }
             else if (bodyHit)
@@ -488,8 +531,49 @@ namespace KazumaPrototype
                     SoundManager.Instance.PlaySE("BossDamageSE");
                 }
                 EmitPulse(balloon.transform.position, Color.gray, 0.7f);
-                balloon.Consume();
+                StopOnBalloonImpact(bodyHitStop);
             }
+        }
+
+        // 遘ｻ蜍募玄髢薙→逅・・陦晉ｪ√ｒ隱ｿ縺ｹ縲・ｫ倬溘↑蠑ｾ繧・ヵ繝ｪ繝・け縺ｮ縺吶ｊ謚懊￠繧帝亟縺舌・
+        // from/to縺ｯ逶ｸ謇九°繧芽ｦ九◆逶ｸ蟇ｾ菴咲ｽｮ縲〉adius縺ｯ蜿梧婿縺ｮ蜊雁ｾ・・蜷郁ｨ医・
+        // time縺ｯ譛蛻昴↓謗･隗ｦ縺吶ｋ譎らせ・・=蛹ｺ髢薙・髢句ｧ九・=邨ゆｺ・ｼ峨よ綾繧雁､縺荊rue縺ｮ縺ｨ縺阪↓菴ｿ縺・・
+        // duration縺ｯ蛛懈ｭ｢縺輔○繧句ｮ滓凾髢薙・遘呈焚縲ょ酔譎ょ多荳ｭ縺ｧ蛛懈ｭ｢譎る俣縺檎ｩ阪∩荳翫′繧峨↑縺・ｈ縺・聞縺・婿繧剃ｽｿ縺・・
+        private void BeginHitStop(float duration)
+        {
+            if (duration <= 0f || float.IsNaN(duration) || float.IsInfinity(duration)) return;
+            hitStopRemaining = Mathf.Max(hitStopRemaining, duration);
+        }
+
+        // duration遘偵・蜻ｽ荳ｭ貍泌・繧帝幕蟋九☆繧九ょ●豁｢荳ｭ縺ｯ繧ｭ繝･繝ｼ繧呈ｮ九＠縲∝●豁｢邨ゆｺ・凾縺ｫ蜀咲函逕｣蠕・■縺ｸ遘ｻ縺吶・
+        private void StopOnBalloonImpact(float duration)
+        {
+            BeginHitStop(duration);
+            if (IsHitStopped) consumeBalloonAfterHitStop = true;
+            else balloon.Consume();
+        }
+
+        // unscaledDeltaTime遘偵□縺大●豁｢譎る俣繧帝ｲ繧√ｋ縲ゅご繝ｼ繝譛ｬ菴薙・譎る俣蛟咲紫繧・ｸ譎ょ●豁｢繧貞､画峩縺励↑縺・・
+        public void AdvanceHitStop(float unscaledDeltaTime)
+        {
+            if (!IsHitStopped) return;
+            hitStopRemaining = Mathf.Max(0f, hitStopRemaining - Mathf.Max(0f, unscaledDeltaTime));
+            if (!IsHitStopped) CompleteHitStop();
+        }
+
+        // 蛛懈ｭ｢繧堤ｵゆｺ・＠縲∽ｿ晉蕗縺励※縺・◆蜻ｽ荳ｭ貂医∩繧ｭ繝･繝ｼ縺ｮ豸郁ｲｻ繧・蝗槭□縺題｡後≧縲・
+        private void CompleteHitStop()
+        {
+            hitStopRemaining = 0f;
+            if (consumeBalloonAfterHitStop && balloon != null) balloon.Consume();
+            consumeBalloonAfterHitStop = false;
+        }
+
+        // 辟｡蜉ｹ蛹悶・繧ｷ繝ｼ繝ｳ遘ｻ蜍輔〒蛛懈ｭ｢繧・兜謫ｲ莠育ｴ・ｒ謖√■雜翫＆縺ｪ縺・ｈ縺・↓縺吶ｋ縲・
+        private void OnDisable()
+        {
+            CompleteHitStop();
+            if (player != null) player.TryConsumeBufferedRelease(out _);
         }
 
         // 遘ｻ蜍募玄髢薙→逅・・陦晉ｪ√ｒ隱ｿ縺ｹ縲・ｫ倬溘↑蠑ｾ繧・ヵ繝ｪ繝・け縺ｮ縺吶ｊ謚懊￠繧帝亟縺舌・
@@ -523,7 +607,7 @@ namespace KazumaPrototype
             EmitPulse(cleared ? boss.position : player.transform.position, cleared ? Color.green : Color.red, 3f);
             if (cleared) boss.gameObject.SetActive(false);
             ClearBullets();
-            Debug.Log(cleared ? "Kazuma: CLEAR. Tap/click to restart." : "Kazuma: HIT. Tap/click to retry.", this);
+            Debug.Log(cleared ? "Prototype: CLEAR. Tap/click to restart." : "Prototype: HIT. Tap/click to retry.", this);
         }
 
         // Destroy縺ｯ繝輔Ξ繝ｼ繝譛ｫ蟆ｾ縺ｾ縺ｧ驕・ｻｶ縺吶ｋ縺溘ａ縲∝・縺ｫ髱櫁｡ｨ遉ｺ縺ｫ縺励※邂｡逅・Μ繧ｹ繝医°繧蛾勁縺上・

@@ -1,20 +1,22 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace KazumaPrototype
+namespace Prototype
 {
-    // 謖・・繝槭え繧ｹ縺ｮ遘ｻ蜍暮㍼縺縺代・繝ｬ繧､繝､繝ｼ繧貞虚縺九☆縲よ款縺励◆菴咲ｽｮ縺ｸ縺ｮ迸ｬ髢鍋ｧｻ蜍輔・縺励↑縺・・
-    // Arena 縺・ReadInput 繧貞他縺ｳ縲∫ｧｻ蜍暮溷ｺｦ繧・款縺呻ｼ城屬縺咏椪髢薙ｒ豌ｴ鬚ｨ闊ｹ縺ｮ蛻ｶ蠕｡縺ｫ貂｡縺吶・
-    public sealed class KazumaDragPlayer : MonoBehaviour
+	// 繝峨Λ繝・げ縺ｮ遘ｻ蜍暮㍼縺ｧ繝励Ξ繧､繝､繝ｼ繧貞虚縺九☆縲・
+    // 謚ｼ縺励◆菴咲ｽｮ縺ｸ縺ｮ迸ｬ髢鍋ｧｻ蜍輔・陦後ｏ縺ｪ縺・・
+    public sealed class DragPlayer : MonoBehaviour
     {
-        // 繧ｭ繝｣繝ｩ繧ｯ繧ｿ繝ｼ縺ｮ蝓ｺ譛ｬ諤ｧ閭ｽ縲ょｮ溯｡梧凾縺ｮ繝代ャ繧ｷ繝冶｣懈ｭ｣繧ゅ％縺ｮ繧､繝ｳ繧ｹ繧ｿ繝ｳ繧ｹ縺ｫ菫晄戟縺吶ｋ縲・
+        // 蝓ｺ譛ｬ諤ｧ閭ｽ縺ｨ縲∝ｮ溯｡梧凾縺ｮ繝代ャ繧ｷ繝冶｣懈ｭ｣繧剃ｿ晄戟縺吶ｋ縲・
+        // 基本性能と、実行時のパッシブ補正を保持する。
         [Header("キャラクター性能：パリィ・キュー・攻撃力")]
         [Tooltip("6種類の基本倍率を調整します。すべて1が標準性能です。")]
-        [SerializeField] private KazumaPlayerParameters parameters = new KazumaPlayerParameters();
+        [SerializeField] private PlayerParameters parameters =
+            new PlayerParameters();
 
-        // Arena縺ｨ豌ｴ鬚ｨ闊ｹ縺悟盾辣ｧ縺吶ｋ蜈ｱ騾壹ヱ繝ｩ繝｡繝ｼ繧ｿ繝ｼ縲よ立Prefab縺ｫ繧ょ・譛溷､縺ｧ蟇ｾ蠢懊☆繧九・
-        public KazumaPlayerParameters Parameters => parameters ?? (parameters = new KazumaPlayerParameters());
-
+        // Arena縺ｨ豌ｴ鬚ｨ闊ｹ縺悟盾辣ｧ縺吶ｋ蜈ｱ騾壹ヱ繝ｩ繝｡繝ｼ繧ｿ繝ｼ縲・
+        public PlayerParameters Parameters =>
+            parameters ?? (parameters = new PlayerParameters());
         // 繝峨Λ繝・げ遘ｻ蜍暮㍼縺ｮ蛟咲紫縲・縺ｪ繧臥判髱｢荳翫・謖・・遘ｻ蜍輔↓蟇ｾ蠢懊＠縺溯ｷ晞屬縺縺大虚縺上・
         [Header("操作：ドラッグへの反応倍率")]
         [Tooltip("1が標準です。大きいほど同じドラッグ量で遠くへ移動します。")]
@@ -25,7 +27,7 @@ namespace KazumaPrototype
         [Tooltip("水風船へ渡す移動速度の上限です。単位はワールド単位毎秒です。")]
         [SerializeField] private float maximumFlickSpeed = 18f;
 
-        // 濶ｲ繧・ｽ｢繧定｡ｨ遉ｺ縺吶ｋ譛ｬ菴薙・Renderer縲・
+        // プレイヤーの表示や色変更に使うRenderer。
         [Header("プレイヤーの見た目：表示用Renderer")]
         [Tooltip("プレイヤーPrefab内の表示用Rendererを設定します。")]
         [SerializeField] private Renderer body;
@@ -52,14 +54,21 @@ namespace KazumaPrototype
         private float lastMovementTime;
         // 蜈ｱ譛峨・繝・Μ繧｢繝ｫ繧貞､峨∴縺壹∝ｯｾ雎｡縺縺代・濶ｲ繧呈欠螳壹☆繧九◆繧√・繝・・繧ｿ縲・
         private MaterialPropertyBlock properties;
+        // 蛛懈ｭ｢荳ｭ縺ｫ髮｢縺励◆蜈･蜉帙ｒ縲√ご繝ｼ繝騾ｲ陦後′蜀埼幕縺吶ｋ縺ｾ縺ｧ菫晏ｭ倥☆繧九・
+        private bool bufferedRelease;
+        // 蛛懈ｭ｢荳ｭ縺ｫ髮｢縺励◆迸ｬ髢薙・繝輔Μ繝・け騾溷ｺｦ縲よｬ｡縺ｮ蜈･蜉帙〒荳頑嶌縺阪＠縺ｪ縺・◆繧∝挨縺ｫ謖√▽縲・
+        private Vector3 bufferedFlickVelocity;
 
-        // false縺ｮ蝣ｴ蜷医√・繝ｬ繧､繝､繝ｼ縺ｮ謫堺ｽ懊ｒ蜿励￠莉倥￠縺ｪ縺・
-        // GameOver縺ｪ縺ｩ縺ｧ菴ｿ逕ｨ
-        public bool CanMove { get; private set; } = true; // Playerの操作状態
+		// GameOver縺ｪ縺ｩ縺ｧ縲√・繝ｬ繧､繝､繝ｼ縺ｮ謫堺ｽ懊ｒ遖∵ｭ｢縺吶ｋ縲・
+        public bool CanMove { get; private set; } = true;
 
-        // 遶ｯ譛ｫ縺ｮ蜈･蜉帙ｒ隱ｭ縺ｿ蜿悶ｋ蜈･蜿｣縲ゅち繝・メ繧貞━蜈医＠縲∝酔縺伜・逅・FeedPointer 縺ｫ貂｡縺吶・
-        // bounds 縺ｯ遘ｻ蜍募庄閭ｽ縺ｪX/Z遽・峇・・ect縺ｮY縺ｯ繝ｯ繝ｼ繝ｫ繝瓜縺ｨ縺励※謇ｱ縺・ｼ峨‥t 縺ｯ遘偵・
-        public void ReadInput(Camera camera, Rect bounds, float dt)
+        // 繧ｿ繝・メ繝ｻ繝槭え繧ｹ蜈･蜉帙ｒ隱ｭ縺ｿ蜿悶ｋ縲・
+        // 繝偵ャ繝医せ繝医ャ繝嶺ｸｭ縺ｯ蜈･蜉帙ｒ霑ｽ霍｡縺励∫ｧｻ蜍輔□縺第ｭ｢繧√ｋ縲・
+        public void ReadInput(
+            Camera camera,
+            Rect bounds,
+            float dt,
+            bool freezeMovement = false)
         {
             // 操作禁止状態なら入力を受け付けない
             if (!CanMove)
@@ -99,30 +108,40 @@ namespace KazumaPrototype
                 held = Mouse.current.leftButton.isPressed;
                 position = Mouse.current.position.ReadValue();
             }
-            FeedPointer(held, position, id, camera, bounds, dt);
+            FeedPointer(held, position, id, camera, bounds, dt, freezeMovement);
         }
 
-        // ============================================================
-        // Player縺ｮ謫堺ｽ懷庄蜷ｦ繧貞､画峩
-        // ============================================================
+		// 繝励Ξ繧､繝､繝ｼ縺ｮ謫堺ｽ懷庄蜷ｦ繧貞､画峩縺吶ｋ縲・
         public void SetCanMove(bool canMove)
         {
             CanMove = canMove;
 
-            // 謫堺ｽ懃ｦ∵ｭ｢縺ｫ縺ｪ縺｣縺滓凾轤ｹ縺ｧ縲∝・蜉帛・逅・→遘ｻ蜍暮溷ｺｦ繧偵Μ繧ｻ繝・ヨ
             if (!CanMove)
             {
+                // 謫堺ｽ懃憾諷九→遘ｻ蜍暮溷ｺｦ繧定ｧ｣髯､縺吶ｋ縲・
                 IsHeld = false;
                 PressedThisFrame = false;
                 ReleasedThisFrame = false;
                 Velocity = Vector3.zero;
                 FlickVelocity = Vector3.zero;
                 pointerId = -1;
+
+                // 謫堺ｽ懃ｦ∵ｭ｢蠕後↓縲∽ｺ育ｴ・ｸ医∩縺ｮ謚墓憧縺悟ｮ溯｡後＆繧後ｋ縺ｮ繧帝亟縺舌・
+                bufferedRelease = false;
+                bufferedFlickVelocity = Vector3.zero;
             }
         }
-        // 謚ｼ荳狗憾諷九→逕ｻ髱｢蠎ｧ讓呻ｼ医ヴ繧ｯ繧ｻ繝ｫ・峨°繧臥ｧｻ蜍輔ｒ險育ｮ励☆繧句・騾壼・逅・・
-        // 螳滓ｩ溷・蜉帙→閾ｪ蜍墓､懆ｨｼ縺ｮ荳｡譁ｹ縺九ｉ蜻ｼ縺ｹ繧九ｈ縺・∝・蜉帙ョ繝舌う繧ｹ縺ｮ隱ｭ縺ｿ蜿悶ｊ繧貞・髮｢縺励※縺・ｋ縲・
-        public void FeedPointer(bool held, Vector2 position, int id, Camera camera, Rect bounds, float dt)
+
+        // 謖・・謚ｼ荳狗憾諷九→逕ｻ髱｢蠎ｧ讓吶°繧臥ｧｻ蜍輔ｒ險育ｮ励☆繧九・
+        // 蛛懈ｭ｢荳ｭ縺ｯ遘ｻ蜍輔○縺壹・屬縺励◆謫堺ｽ懊ｒ莠育ｴ・☆繧九・
+        public void FeedPointer(
+            bool held,
+            Vector2 position,
+            int id,
+            Camera camera,
+            Rect bounds,
+            float dt,
+            bool freezeMovement = false)
         {
             PressedThisFrame = ReleasedThisFrame = false;
             Velocity = Vector3.zero;
@@ -136,8 +155,22 @@ namespace KazumaPrototype
                 ReleasedThisFrame = IsHeld;
                 IsHeld = false;
                 pointerId = -1;
-                // 豁｢繧√※縺九ｉ髮｢縺励◆蝣ｴ蜷医・縲∝商縺・ｧｻ蜍暮溷ｺｦ縺ｧ謚輔￡縺ｪ縺・ｈ縺・↓縺吶ｋ・育幻莠・.1遘抵ｼ峨・
-                if (Time.unscaledTime - lastMovementTime > 0.1f) FlickVelocity = Vector3.zero;
+
+                // 騾壼ｸｸ譎ゅ・縲∝商縺・ｧｻ蜍暮溷ｺｦ縺ｧ謚輔￡縺ｪ縺・ｈ縺・↓縺吶ｋ縲・
+                if (!freezeMovement &&
+                    Time.unscaledTime - lastMovementTime > 0.1f)
+                {
+                    FlickVelocity = Vector3.zero;
+                }
+
+                // 蛛懈ｭ｢荳ｭ縺ｫ謖・ｒ髮｢縺励◆蝣ｴ蜷医∝ｾｩ蟶ｰ蠕後・謚墓憧繧剃ｺ育ｴ・☆繧九・
+                if (freezeMovement && ReleasedThisFrame)
+                {
+                    bufferedRelease = true;
+                    bufferedFlickVelocity = FlickVelocity;
+                }
+
+                // 謖・ｒ髮｢縺励◆縺ｨ縺阪・蜃ｦ逅・ｒ邨ゅ∴縺ｦ縺九ｉ邨ゆｺ・☆繧九・
                 return;
             }
             // 謚ｼ縺励◆譛蛻昴・繝輔Ξ繝ｼ繝縺ｯ蝓ｺ貅門ｺｧ讓吶・險倬鹸縺縺代ｒ陦後＞縲√・繝ｬ繧､繝､繝ｼ繧貞虚縺九＆縺ｪ縺・・
@@ -150,8 +183,17 @@ namespace KazumaPrototype
                 FlickVelocity = Vector3.zero;
                 return;
             }
-            // 蜑榊屓・丈ｻ雁屓縺ｮ逕ｻ髱｢蠎ｧ讓吶°繧峨√・繝ｬ繧､繝､繝ｼ縺ｨ蜷後§鬮倥＆縺ｮ豌ｴ蟷ｳ髱｢縺ｸ繝ｬ繧､繧帝｣帙・縺吶・
-            // 莠､轤ｹ縺ｮ蟾ｮ蛻・ｒ菴ｿ縺・◆繧√√き繝｡繝ｩ縺ｮ諡｡螟ｧ邇・ｄ逕ｻ髱｢繧ｵ繧､繧ｺ繧堤ｧｻ蜍暮㍼縺ｫ蜿肴丐縺ｧ縺阪ｋ縲・
+            if (freezeMovement)
+            {
+                // 蛛懈ｭ｢荳ｭ縺ｮ繝峨Λ繝・げ驥上・遘ｻ蜍輔∈蜉邂励＠縺ｪ縺・・
+                // 蠕ｩ蟶ｰ譎ゅ↓菴咲ｽｮ縺碁｣帙・縺ｪ縺・ｈ縺・∝渕貅門ｺｧ讓吶□縺第峩譁ｰ縺吶ｋ縲・
+                previousPointer = position;
+                lastMovementTime = Time.unscaledTime;
+                return;
+            }
+
+            // 蜑榊屓縺ｨ莉雁屓縺ｮ逕ｻ髱｢蠎ｧ讓吶ｒ縲√・繝ｬ繧､繝､繝ｼ縺ｨ蜷後§鬮倥＆縺ｮ
+            // 豌ｴ蟷ｳ髱｢荳翫・蠎ｧ讓吶∈螟画鋤縺励√◎縺ｮ蟾ｮ蛻・〒遘ｻ蜍輔☆繧九・
             var plane = new Plane(Vector3.up, transform.position);
             // 蜑榊屓縺ｮ逕ｻ髱｢蠎ｧ讓吶°繧画ｰｴ蟷ｳ髱｢縺ｸ鬟帙・縺吶Ξ繧､縲・
             Ray before = camera.ScreenPointToRay(previousPointer);
@@ -179,6 +221,8 @@ namespace KazumaPrototype
         // 菴咲ｽｮ縺ｨ蜈･蜉帛ｱ･豁ｴ繧貞・譛溷喧縺吶ｋ縲ＸaitForRelease=true縺ｪ繧峨∵ｬ｡縺ｮ謚ｼ縺礼峩縺励∪縺ｧ謫堺ｽ懊ｒ蜿励￠莉倥￠縺ｪ縺・・
         public void ResetPlayer(Vector3 position, bool waitForRelease = false)
         {
+            bufferedRelease = false;
+            bufferedFlickVelocity = Vector3.zero;
             transform.position = position;
             IsHeld = PressedThisFrame = ReleasedThisFrame = false;
             Velocity = FlickVelocity = Vector3.zero;
@@ -187,7 +231,18 @@ namespace KazumaPrototype
             SetColor(new Color(0.12f, 0.8f, 1f));
         }
 
-        // 蜈ｱ譛峨・繝・Μ繧｢繝ｫ繧定､・｣ｽ縺帙★縲√％縺ｮ繝励Ξ繧､繝､繝ｼ縺縺代・陦ｨ遉ｺ濶ｲ繧貞､峨∴繧九・
+		 // 繝偵ャ繝医せ繝医ャ繝嶺ｸｭ縺ｮ謚墓憧莠育ｴ・ｒ縲・蝗槭□縺大叙繧雁・縺吶・
+        public bool TryConsumeBufferedRelease(out Vector3 flickVelocity)
+        {
+            flickVelocity = bufferedFlickVelocity;
+
+            // 莠育ｴ・・譛臥┌繧剃ｿ晏ｭ倥＠縺ｦ縺九ｉ縲∽ｺ育ｴ・ｒ隗｣髯､縺吶ｋ縲・
+            bool hadRelease = bufferedRelease;
+            bufferedRelease = false;
+
+            return hadRelease;
+        }
+        // 蜈ｱ譛峨・繝・Μ繧｢繝ｫ繧定､・｣ｽ縺帙★縲√％縺ｮ繝励Ξ繧､繝､繝ｼ縺ｮ濶ｲ縺縺代ｒ螟峨∴繧九・
         public void SetColor(Color color)
         {
             if (body == null) return;
