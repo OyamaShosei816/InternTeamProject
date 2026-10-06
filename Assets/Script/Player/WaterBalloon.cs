@@ -1,10 +1,10 @@
 using UnityEngine;
 
-namespace KazumaPrototype
+namespace Prototype
 {
     // 水風船の公転、回転による強化、投擲、回復と見た目を管理する。
     // Arena が細かい時間刻みで Simulate を呼び、衝突時は Consume で回復待ちにする。
-    public sealed class KazumaWaterBalloon : MonoBehaviour
+    public sealed class WaterBalloon : MonoBehaviour
     {
         // Ready: 待機／Orbiting: 押している間の公転／Flying: 投擲中／Recovering: 再出現待ち。
         public enum MotionState { Ready, Orbiting, Flying, Recovering }
@@ -58,14 +58,14 @@ namespace KazumaPrototype
         // キャラクター性能を反映した現在の当たり判定半径（ワールド単位）。
         public float HitRadius => Radius * Parameters.CueHitRange;
         // 所有者の性能。Arenaからプレイヤーと同じインスタンスを渡す。
-        private KazumaPlayerParameters parameters = new KazumaPlayerParameters();
+        private PlayerParameters parameters = new PlayerParameters();
         // 単体で配置された風船でも初期性能で動作するための参照。
-        private KazumaPlayerParameters Parameters => parameters;
+        private PlayerParameters Parameters => parameters;
 
         // ownerParametersは所有者の共通性能。参照を共有し、スキル変更をすぐ反映する。
-        public void SetPlayerParameters(KazumaPlayerParameters ownerParameters)
+        public void SetPlayerParameters(PlayerParameters ownerParameters)
         {
-            parameters = ownerParameters ?? new KazumaPlayerParameters();
+            parameters = ownerParameters ?? new PlayerParameters();
         }
         // 待機・公転・飛行・回復待ちのうち、現在の水風船の状態。
         public MotionState State { get; private set; }

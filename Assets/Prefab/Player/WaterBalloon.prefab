@@ -155,7 +155,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: af32365ee6fadb94484b79f0b77edf25, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaWaterBalloon
+  m_EditorClassIdentifier: Assembly-CSharp::Prototype.WaterBalloon
   orbitRadius: 1.35
   spring: 65
   damping: 6

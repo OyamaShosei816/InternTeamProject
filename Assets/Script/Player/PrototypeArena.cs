@@ -2,30 +2,30 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace KazumaPrototype
+namespace Prototype
 {
     // ゲーム進行の司令塔。入力→水風船の移動→弾の衝突→ボス判定の順に更新する。
     // 弾幕、投擲直後の無敵／パリィ、勝敗、リトライ、円形エフェクトもここで管理する。
-    public sealed class KazumaPrototypeArena : MonoBehaviour
+    public sealed class PrototypeArena : MonoBehaviour
     {
         // プレイ中・クリア・失敗の3状態。終了後は一定時間を置いて押し直すと再開できる。
         public enum RoundState { Playing, Cleared, Failed }
-        // シーン／Prefabの参照。KazumaPrototypeBuilderが生成時に設定する。
+        // シーン／Prefabの参照。PrototypeBuilderが生成時に設定する。
         [Header("画面：ゲーム用カメラ")]
         [Tooltip("プレイ画面のCameraを設定します。画面の広さとタッチ位置の計算に使います。")]
         [SerializeField] private Camera gameCamera;
         // 操作するプレイヤーの入力・移動コンポーネント。
         [Header("操作対象：プレイヤー")]
-        [Tooltip("シーン内のプレイヤーに付いたKazumaDragPlayerを設定します。")]
-        [SerializeField] private KazumaDragPlayer player;
+        [Tooltip("シーン内のプレイヤーに付いたDragPlayerを設定します。")]
+        [SerializeField] private DragPlayer player;
         // 水風船の移動・投擲を管理するコンポーネント。
         [Header("攻撃対象：水風船")]
-        [Tooltip("シーン内の水風船に付いたKazumaWaterBalloonを設定します。")]
-        [SerializeField] private KazumaWaterBalloon balloon;
+        [Tooltip("シーン内の水風船に付いたWaterBalloonを設定します。")]
+        [SerializeField] private WaterBalloon balloon;
         // 発射時に複製する敵弾Prefabのコンポーネント。
         [Header("敵の攻撃：発射する弾Prefab")]
-        [Tooltip("Project内のEnemyBullet Prefabに付いたKazumaBulletを設定します。発射ごとに複製します。")]
-        [SerializeField] private KazumaBullet bulletPrefab;
+        [Tooltip("Project内のEnemyBullet Prefabに付いたBulletを設定します。発射ごとに複製します。")]
+        [SerializeField] private Bullet bulletPrefab;
         // ボス本体の位置と表示を管理するTransform。
         [Header("敵の配置：ボス本体")]
         [Tooltip("シーン内のボス本体のTransformを設定します。胴体の接触判定とクリア時の非表示に使います。")]
@@ -54,6 +54,24 @@ namespace KazumaPrototype
         [Header("パリィ：投擲後の受付時間（秒）")]
         [Tooltip("投擲後のこの時間内に強さ3の弾へ触れると全弾を消します。大きいほど成功しやすくなります。")]
         [SerializeField] private float parryWindow = 0.12f;
+        // キューが弱点に当たった瞬間にゲーム進行を止める時間。実時間の秒数で指定する。
+        [Header("キュー演出：弱点命中時の停止時間（秒）")]
+        [Tooltip("初期値0.08秒。長いほど命中の重さが強調されます。0で無効です。")]
+        [SerializeField, Range(0f, 0.3f)] private float weakPointHitStop = 0.08f;
+        // ダメージが入らない胴体への命中に使う、短めの停止時間。
+        [Header("キュー演出：胴体命中時の停止時間（秒）")]
+        [Tooltip("初期値0.04秒。ボスの胴体にキューが当たったときに停止します。0で無効です。")]
+        [SerializeField, Range(0f, 0.3f)] private float bodyHitStop = 0.04f;
+        // 公転中・投擲中のキューが敵弾を消したときの停止時間。
+        [Header("キュー演出：敵弾を消したときの停止時間（秒）")]
+        [Tooltip("初期値0.025秒。連続命中では時間を足さず、長い方を採用します。0で無効です。")]
+        [SerializeField, Range(0f, 0.3f)] private float bulletHitStop = 0.025f;
+        // 現在ヒットストップ中か。停止中はゲーム進行と追加の命中判定を行わない。
+        public bool IsHitStopped => hitStopRemaining > 0f;
+        // ヒットストップの残り時間（実時間の秒数）。Time.timeScaleには影響されない。
+        private float hitStopRemaining;
+        // ボス命中時のキューを停止中は表示し、停止終了後に消費するための予約。
+        private bool consumeBalloonAfterHitStop;
         // 現在の進行状態。
         public RoundState State { get; private set; }
         // ボスの残りHP。0になるとクリア。
@@ -65,7 +83,7 @@ namespace KazumaPrototype
         // プレイヤー中心の移動範囲。Rectの横軸はワールドX、縦軸はワールドZに対応する。
         public static Rect MovementBounds => Rect.MinMaxRect(-4.1f, -7.5f, 4.1f, 3.7f);
         // 画面内で更新・判定する敵弾の一覧。
-        private readonly List<KazumaBullet> bullets = new List<KazumaBullet>();
+        private readonly List<Bullet> bullets = new List<Bullet>();
         // 表示中の円形エフェクトの一覧。
         private readonly List<Pulse> pulses = new List<Pulse>();
         // 発射までの残り秒数、無敵の残り秒数、パリィの残り秒数、終了後の経過秒数。
@@ -100,6 +118,7 @@ namespace KazumaPrototype
         // 残った弾・演出を片付け、HP、タイマー、プレイヤーと風船を開始状態に戻す。
         public void ResetRound()
         {
+            CompleteHitStop();
             ClearBullets();
             // pulse：一覧から取り出した、今回処理する対象。
             foreach (var pulse in pulses)
@@ -126,17 +145,32 @@ namespace KazumaPrototype
         // 毎フレームの進行処理。プレイヤー入力は1回読み、物理的な移動と衝突だけ細分化する。
         private void Update()
         {
-            // 画面が縦長でも左右のプレイ領域を確保するよう、カメラの表示範囲を広げる。
-            gameCamera.orthographicSize = Mathf.Max(9f, 5f / Mathf.Max(gameCamera.aspect, 0.1f));
-            // 処理落ち後に一度に大きく動くのを避けるため、1フレームで進める時間を0.1秒までにする。
-            float dt = Mathf.Min(Time.deltaTime, 0.1f);
-            UpdatePulses(dt);
-            player.ReadInput(gameCamera, MovementBounds, dt);
+            AdvanceFrame(Time.deltaTime, Time.unscaledDeltaTime);
+        }
+
+        // deltaTimeはゲーム内の経過秒数、unscaledDeltaTimeは時間倍率に依存しない実経過秒数。
+        // 実際のUpdateと検証で同じ進行処理を使い、停止中の移動や復帰を確認できるようにする。
+        public void AdvanceFrame(float deltaTime, float unscaledDeltaTime)
+        {
+            // 停止中もRキーで即座にリトライできる。
             if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
             {
                 ResetRound();
                 return;
             }
+            if (IsHitStopped)
+            {
+                // 座標の基準だけ更新して復帰時のジャンプを防ぎ、離した入力はプレイヤー側に保存する。
+                player.ReadInput(gameCamera, MovementBounds, unscaledDeltaTime, freezeMovement: true);
+                AdvanceHitStop(unscaledDeltaTime);
+                return;
+            }
+            // 画面が縦長でも左右のプレイ領域を確保するよう、カメラの表示範囲を広げる。
+            gameCamera.orthographicSize = Mathf.Max(9f, 5f / Mathf.Max(gameCamera.aspect, 0.1f));
+            // 処理落ち後に一度に大きく動くのを避けるため、1フレームで進める時間を0.1秒までにする。
+            float dt = Mathf.Clamp(deltaTime, 0f, 0.1f);
+            UpdatePulses(dt);
+            player.ReadInput(gameCamera, MovementBounds, dt);
             if (State != RoundState.Playing)
             {
                 endTimer += dt;
@@ -145,7 +179,10 @@ namespace KazumaPrototype
                 else player.transform.position = previousPlayerPosition;
                 return;
             }
-            if (player.ReleasedThisFrame && balloon.Launch(player.FlickVelocity))
+            // bufferedReleaseは停止中の投擲予約の有無、bufferedFlickはその瞬間の速度。
+            // 予約があれば最新の入力より優先し、復帰時に1回だけ投げる。
+            bool bufferedRelease = player.TryConsumeBufferedRelease(out Vector3 bufferedFlick);
+            if ((bufferedRelease || player.ReleasedThisFrame) && balloon.Launch(bufferedRelease ? bufferedFlick : player.FlickVelocity))
                 BeginReleaseProtection();
             // 今回の入力を反映したプレイヤーの到達位置。
             Vector3 currentPlayerPosition = player.transform.position;
@@ -163,13 +200,15 @@ namespace KazumaPrototype
                 Vector3 to = Vector3.Lerp(previousPlayerPosition, currentPlayerPosition, (i + 1f) / steps);
                 balloon.Simulate(to, player.Velocity, player.IsHeld, step);
                 TickBullets(from, to, step);
-                if (State != RoundState.Playing) break;
+                if (State != RoundState.Playing || IsHitStopped) break;
                 CheckBossHit();
+                // 命中したフレームの残りの細分化処理も止め、キューが進み続けるのを防ぐ。
+                if (IsHitStopped) break;
                 invincible = Mathf.Max(0f, invincible - step);
                 parryRemaining = Mathf.Max(0f, parryRemaining - step);
             }
             previousPlayerPosition = currentPlayerPosition;
-            if (State != RoundState.Playing) return;
+            if (State != RoundState.Playing || IsHitStopped) return;
             player.SetColor(invincible > 0f ? Color.white : new Color(0.12f, 0.8f, 1f));
             shotTimer -= dt;
             if (shotTimer <= 0f)
@@ -208,7 +247,7 @@ namespace KazumaPrototype
         }
 
         // 弾を生成して管理リストへ登録する。負荷対策として96個を上限とし、超えたらnullを返す。
-        public KazumaBullet SpawnBullet(Vector3 position, Vector3 velocity, int power)
+        public Bullet SpawnBullet(Vector3 position, Vector3 velocity, int power)
         {
             if (bullets.Count >= 96) return null;
             // 生成または判定対象となる敵弾。
@@ -221,6 +260,7 @@ namespace KazumaPrototype
         // 弾を進めて衝突を解決する。playerFrom/Toはこの時間区間のプレイヤー移動前／後の位置。
         public void TickBullets(Vector3 playerFrom, Vector3 playerTo, float dt)
         {
+            if (IsHitStopped) return;
             // 通常の被弾より先にパリィを判定する。受付中に強さ3の弾へ接触すると全弾を消す。
             // i：この繰り返しで処理する対象の番号。条件を満たす間、順番に更新する。
             for (int i = 0; i < bullets.Count; i++) bullets[i].Simulate(dt);
@@ -230,7 +270,7 @@ namespace KazumaPrototype
                 foreach (var bullet in bullets)
                 {
                     if (bullet.Power == 3 && Sweep(bullet.PreviousPosition - playerFrom,
-                        bullet.transform.position - playerTo, bullet.Radius + KazumaDragPlayer.Radius * player.Parameters.ParryRange, out _))
+                        bullet.transform.position - playerTo, bullet.Radius + DragPlayer.Radius * player.Parameters.ParryRange, out _))
                     {
                         ParryCount++;
                         ClearBullets();
@@ -248,7 +288,7 @@ namespace KazumaPrototype
                 var bullet = bullets[i];
                 // 敵弾がこの移動区間でプレイヤーに接触するか。playerTimeは接触時点（0～1）。
                 bool hitsPlayer = Sweep(bullet.PreviousPosition - playerFrom,
-                    bullet.transform.position - playerTo, bullet.Radius + KazumaDragPlayer.Radius, out float playerTime);
+                    bullet.transform.position - playerTo, bullet.Radius + DragPlayer.Radius, out float playerTime);
                 // 敵弾が水風船へ触れる時点（0～1）。未接触なら無限大のままにする。
                 float ballTime = float.PositiveInfinity;
                 // 水風船の強さが足りており、移動区間で敵弾に接触するか。
@@ -260,6 +300,7 @@ namespace KazumaPrototype
                 if (hitsBall && (!hitsPlayer || ballTime <= playerTime))
                 {
                     RemoveBullet(i);
+                    BeginHitStop(bulletHitStop);
                     continue;
                 }
                 if (hitsPlayer)
@@ -278,7 +319,8 @@ namespace KazumaPrototype
         // 弱点なら速度に応じたダメージ、胴体ならダメージなしで風船を消費する。
         public void CheckBossHit()
         {
-            if (balloon.State != KazumaWaterBalloon.MotionState.Flying) return;
+            if (IsHitStopped) return;
+            if (balloon.State != WaterBalloon.MotionState.Flying) return;
             // 水風船が弱点に接触するか。weakTimeは移動区間内の最初の接触時点（0～1）。
             bool weakHit = Sweep(balloon.PreviousPosition - weakPoint.position,
                 balloon.transform.position - weakPoint.position, balloon.HitRadius + 0.55f, out float weakTime);
@@ -289,15 +331,53 @@ namespace KazumaPrototype
             {
                 BossHealth = Mathf.Max(0f, BossHealth - balloon.CurrentDamage);
                 EmitPulse(weakPoint.position, Color.yellow, 1.6f);
-                balloon.Consume();
-                Debug.Log($"Kazuma: weak point hit. Boss HP {BossHealth:0}/{bossMaxHealth:0}", this);
+                StopOnBalloonImpact(weakPointHitStop);
+                Debug.Log($"Prototype: weak point hit. Boss HP {BossHealth:0}/{bossMaxHealth:0}", this);
                 if (BossHealth <= 0f) EndRound(true);
             }
             else if (bodyHit)
             {
                 EmitPulse(balloon.transform.position, Color.gray, 0.7f);
-                balloon.Consume();
+                StopOnBalloonImpact(bodyHitStop);
             }
+        }
+
+        // durationは停止させる実時間の秒数。同時命中で停止時間が積み上がらないよう長い方を使う。
+        private void BeginHitStop(float duration)
+        {
+            if (duration <= 0f || float.IsNaN(duration) || float.IsInfinity(duration)) return;
+            hitStopRemaining = Mathf.Max(hitStopRemaining, duration);
+        }
+
+        // duration秒の命中演出を開始する。停止中はキューを残し、停止終了時に再生産待ちへ移す。
+        private void StopOnBalloonImpact(float duration)
+        {
+            BeginHitStop(duration);
+            if (IsHitStopped) consumeBalloonAfterHitStop = true;
+            else balloon.Consume();
+        }
+
+        // unscaledDeltaTime秒だけ停止時間を進める。ゲーム本体の時間倍率や一時停止を変更しない。
+        public void AdvanceHitStop(float unscaledDeltaTime)
+        {
+            if (!IsHitStopped) return;
+            hitStopRemaining = Mathf.Max(0f, hitStopRemaining - Mathf.Max(0f, unscaledDeltaTime));
+            if (!IsHitStopped) CompleteHitStop();
+        }
+
+        // 停止を終了し、保留していた命中済みキューの消費を1回だけ行う。
+        private void CompleteHitStop()
+        {
+            hitStopRemaining = 0f;
+            if (consumeBalloonAfterHitStop && balloon != null) balloon.Consume();
+            consumeBalloonAfterHitStop = false;
+        }
+
+        // 無効化・シーン移動で停止や投擲予約を持ち越さないようにする。
+        private void OnDisable()
+        {
+            CompleteHitStop();
+            if (player != null) player.TryConsumeBufferedRelease(out _);
         }
 
         // 移動区間と球の衝突を調べ、高速な弾やフリックのすり抜けを防ぐ。
@@ -331,7 +411,7 @@ namespace KazumaPrototype
             EmitPulse(cleared ? boss.position : player.transform.position, cleared ? Color.green : Color.red, 3f);
             if (cleared) boss.gameObject.SetActive(false);
             ClearBullets();
-            Debug.Log(cleared ? "Kazuma: CLEAR. Tap/click to restart." : "Kazuma: HIT. Tap/click to retry.", this);
+            Debug.Log(cleared ? "Prototype: CLEAR. Tap/click to restart." : "Prototype: HIT. Tap/click to retry.", this);
         }
 
         // Destroyはフレーム末尾まで遅延するため、先に非表示にして管理リストから除く。

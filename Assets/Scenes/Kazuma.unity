@@ -483,7 +483,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f2b59f1a77b9df74986c3e7216d2f715, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaDragPlayer
+  m_EditorClassIdentifier: Assembly-CSharp::Prototype.DragPlayer
 --- !u!4 &477753630 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7081864470461988066, guid: e9a1bb42f514ccd45b3484a4633658af, type: 3}
@@ -572,7 +572,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: af32365ee6fadb94484b79f0b77edf25, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaWaterBalloon
+  m_EditorClassIdentifier: Assembly-CSharp::Prototype.WaterBalloon
 --- !u!4 &650310405 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7832358170989371430, guid: 218ced46014985541a87b3f930319527, type: 3}
@@ -835,7 +835,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5dd3b51bfea1b564fb07a3f50ec6ff7e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaPrototypeArena
+  m_EditorClassIdentifier: Assembly-CSharp::Prototype.PrototypeArena
   gameCamera: {fileID: 330585545}
   player: {fileID: 477753629}
   balloon: {fileID: 650310404}

@@ -1,12 +1,12 @@
 using System;
 using UnityEngine;
 
-namespace KazumaPrototype
+namespace Prototype
 {
     // キャラクターごとの基本性能と、将来のパッシブスキルによる補正を管理する。
     // プレイヤーのInspectorに保存する基本倍率 × 実行中のパッシブ倍率で最終性能を求める。
     [Serializable]
-    public sealed class KazumaPlayerParameters
+    public sealed class PlayerParameters
     {
         // パリィ専用の判定半径の倍率。通常の被弾判定の大きさは変えない。
         [Header("パリィ：成功判定の広さ（倍率）")]

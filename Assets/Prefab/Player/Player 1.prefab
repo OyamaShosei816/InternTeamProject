@@ -134,7 +134,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f2b59f1a77b9df74986c3e7216d2f715, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaDragPlayer
+  m_EditorClassIdentifier: Assembly-CSharp::Prototype.DragPlayer
   parameters:
     parryRange: 1
     cueSpeed: 1
