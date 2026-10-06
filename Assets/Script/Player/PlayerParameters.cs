@@ -23,9 +23,14 @@ namespace Prototype
         [Tooltip("1が標準。2なら同じ実回転数で強化の進捗が2倍です。移動しながら回す必要があります。")]
         [SerializeField, Min(0.01f)] private float cueGrowth = 1f;
 
+        // Lv.1のキューが弱点に与える、キャラクター固有の基本ダメージ。
+        [Header("攻撃力：Lv.1キューの基本ダメージ")]
+        [Tooltip("初期値10。Lv.2とLv.3はこの2倍です。攻撃力倍率とパッシブ補正をさらに掛けます。")]
+        [SerializeField, Min(0f)] private float baseAttackPower = 10f;
+
         // 弱点に命中した際のダメージに掛ける基本倍率。
         [Header("攻撃力：弱点ダメージ（倍率）")]
-        [Tooltip("1が標準。2なら同じ投擲速度でダメージが2倍です。ボス胴体への命中には効果がありません。")]
+        [Tooltip("1が標準。2なら同じレベルのダメージが2倍です。ボス胴体への命中には効果がありません。")]
         [SerializeField, Min(0.01f)] private float attack = 1f;
 
         // 再出現待ちのタイマーを進める速さ。2倍なら待ち時間は半分になる。
@@ -59,6 +64,8 @@ namespace Prototype
         public float CueGrowth => SafeMultiplier(cueGrowth) * SafeMultiplier(passiveCueGrowth);
         // 現在の攻撃力倍率。
         public float Attack => SafeMultiplier(attack) * SafeMultiplier(passiveAttack);
+        // キャラクターの基本ダメージに倍率を適用した、Lv.1キューの最終攻撃力。
+        public float AttackPower => Mathf.Max(0f, baseAttackPower) * Attack;
         // 現在の再生産速度倍率。待ち時間には逆数として効く。
         public float CueReproduction => SafeMultiplier(cueReproduction) * SafeMultiplier(passiveCueReproduction);
         // 現在の水風船の当たり判定半径倍率。

@@ -77,25 +77,54 @@ namespace Prototype
         private float blinkTimer;
         private bool isGameOver;
 
-        // 蠑ｱ轤ｹ蜻ｽ荳ｭ譎ゅ・繝偵ャ繝医せ繝医ャ繝励・
-        [Header("ヒットストップ：弱点命中")]
-        [Tooltip("弱点命中時の停止時間です。単位は秒です。")]
-        [SerializeField, Range(0f, 0.3f)]
-        private float weakPointHitStop = 0.08f;
-
-        // 繝懊せ縺ｮ閭ｴ菴薙↓蜻ｽ荳ｭ縺励◆縺ｨ縺阪・繝偵ャ繝医せ繝医ャ繝励・
-        [Header("ヒットストップ：ボス本体命中")]
-        [Tooltip("ボス本体に命中したときの停止時間です。単位は秒です。")]
-        [SerializeField, Range(0f, 0.3f)]
-        private float bodyHitStop = 0.04f;
-
-        // 豌ｴ鬚ｨ闊ｹ縺梧雰蠑ｾ繧呈ｶ医＠縺溘→縺阪・繝偵ャ繝医せ繝医ャ繝励・
-        [Header("ヒットストップ：敵弾消去")]
-        [Tooltip("水風船が敵弾を消したときの停止時間です。単位は秒です。")]
-        [SerializeField, Range(0f, 0.3f)]
-        private float bulletHitStop = 0.025f;
-
         // 谿九ｊ譎る俣縺後≠繧矩俣縺ｯ縲√ヲ繝・ヨ繧ｹ繝医ャ繝嶺ｸｭ縺ｨ縺励※謇ｱ縺・・
+        // 繧ｭ繝･繝ｼ縺悟ｼｱ轤ｹ縺ｫ蠖薙◆縺｣縺溽椪髢薙↓繧ｲ繝ｼ繝騾ｲ陦後ｒ豁｢繧√ｋ譎る俣縲ょｮ滓凾髢薙・遘呈焚縺ｧ謖・ｮ壹☆繧九・
+        [Header("弱点命中：ヒットストップ")]
+        [Tooltip("停止時間を秒で指定します。0で無効です。")]
+        [SerializeField, Range(0f, 0.3f)] private float weakPointHitStop = 0.15f;
+        // 蠑ｱ轤ｹ蜻ｽ荳ｭ譎ゅ↓縲√き繝｡繝ｩ繧堤判髱｢縺ｮ讓ｪ繝ｻ邵ｦ譁ｹ蜷代∈謠ｺ繧峨☆譛螟ｧ霍晞屬縲・
+        [Header("弱点命中：カメラの揺れ幅")]
+        [Tooltip("揺れの大きさです。0で無効にします。")]
+        [SerializeField, Min(0f)] private float cameraShakeStrength = 0.12f;
+        // 繝偵ャ繝医せ繝医ャ繝嶺ｸｭ繧ょｮ滓凾髢薙〒騾ｲ繧縲√き繝｡繝ｩ繧ｷ繧ｧ繧､繧ｯ縺ｮ陦ｨ遉ｺ譎る俣縲・
+        [Header("弱点命中：カメラが揺れる時間")]
+        [Tooltip("揺れの表示時間です。単位は秒です。")]
+        [SerializeField, Min(0f)] private float cameraShakeDuration = 0.15f;
+        // 繧ｫ繝｡繝ｩ繧ｷ繧ｧ繧､繧ｯ縺ｮ1遘偵≠縺溘ｊ縺ｮ謖ｯ蜍募屓謨ｰ縲・
+        [Header("弱点命中：カメラの揺れる速さ")]
+        [Tooltip("1秒あたりの振動回数です。")]
+        [SerializeField, Min(1f)] private float cameraShakeFrequency = 35f;
+        // 繧ｫ繝｡繝ｩ繧ｷ繧ｧ繧､繧ｯ繧帝幕蟋九＠縺ｦ縺九ｉ縺ｮ螳溽ｵ碁℃遘呈焚縲・
+        private float cameraShakeElapsed;
+        // 蜑榊屓縺ｮ謠冗判逕ｨ縺ｫ繧ｫ繝｡繝ｩ縺ｸ蜉縺医◆菴咲ｽｮ縺ｮ縺壹ｌ縲ょ・蜉帛愛螳壼燕縺ｨ貍泌・邨ゆｺ・凾縺ｫ蜿悶ｊ髯､縺上・
+        private Vector3 cameraShakeOffset;
+        // 蠑ｱ轤ｹ蜻ｽ荳ｭ縺ｮ繧ｷ繧ｧ繧､繧ｯ縺碁ｲ陦御ｸｭ縺九ゅご繝ｼ繝縺ｮ蛛懈ｭ｢荳ｭ繧よ昭繧後・譖ｴ譁ｰ縺ｯ邯咏ｶ壹☆繧九・
+        public bool IsCameraShaking { get; private set; }
+        // 繝繝｡繝ｼ繧ｸ縺悟・繧峨↑縺・Χ菴薙∈縺ｮ蜻ｽ荳ｭ縺ｫ菴ｿ縺・∫洒繧√・蛛懈ｭ｢譎る俣縲・
+        [Header("ヒットストップ：ボス本体命中")]
+        [Tooltip("本体命中時の停止時間です。単位は秒です。")]
+        [SerializeField, Range(0f, 0.3f)] private float bodyHitStop = 0.04f;
+        // 蜈ｬ霆｢荳ｭ繝ｻ謚墓憧荳ｭ縺ｮ繧ｭ繝･繝ｼ縺梧雰蠑ｾ繧呈ｶ医＠縺溘→縺阪・蛛懈ｭ｢譎る俣縲・
+        [Header("ヒットストップ：敵弾消去")]
+        [Tooltip("敵弾を消したときの停止時間です。単位は秒です。")]
+        [SerializeField, Range(0f, 0.3f)] private float bulletHitStop = 0.025f;
+        // 謨ｵ蠑ｾ繧偵く繝･繝ｼ縺ｧ豸医＠縺滄圀縲√く繝･繝ｼ縺ｮ螟門捉縺九ｉ蠎・′繧玖ｼｪ縺ｮ濶ｲ縲・
+        [Header("弾消し演出：輪の色")]
+        [Tooltip("水風船の外周に表示する輪の色です。")]
+        [SerializeField] private Color bulletEraseColor = new Color(0.4f, 1f, 1f, 1f);
+        // 蠖薙◆繧雁愛螳壹・螟門捉縺九ｉ縲∬ｼｪ縺ｮ蜊雁ｾ・ｒ霑ｽ蜉縺ｧ蠎・￡繧玖ｷ晞屬縲・
+        [Header("弾消し演出：輪が広がる距離")]
+        [Tooltip("当たり判定の外側へ広がる距離です。")]
+        [SerializeField, Min(0f)] private float bulletEraseExpansion = 0.8f;
+        // 蠑ｾ豸医＠縺ｮ霈ｪ縺悟・迴ｾ縺励※縺九ｉ豸医∴繧九∪縺ｧ縺ｮ譎る俣縲ゅヲ繝・ヨ繧ｹ繝医ャ繝嶺ｸｭ縺ｯ騾ｲ繧√↑縺・・
+        [Header("弾消し演出：輪の表示時間")]
+        [Tooltip("表示時間を秒で指定します。0で無効にします。")]
+        [SerializeField, Min(0f)] private float bulletEraseDuration = 0.3f;
+        // 蠑ｾ豸医＠縺ｮ霈ｪ繧呈緒縺冗ｷ壹・螟ｪ縺輔・
+        [Header("弾消し演出：輪の線の太さ")]
+        [Tooltip("輪を描く線の太さです。")]
+        [SerializeField, Min(0.001f)] private float bulletEraseWidth = 0.09f;
+        // 迴ｾ蝨ｨ繝偵ャ繝医せ繝医ャ繝嶺ｸｭ縺九ょ●豁｢荳ｭ縺ｯ繧ｲ繝ｼ繝騾ｲ陦後→霑ｽ蜉縺ｮ蜻ｽ荳ｭ蛻､螳壹ｒ陦後ｏ縺ｪ縺・・
         public bool IsHitStopped => hitStopRemaining > 0f;
         private float hitStopRemaining;
 
@@ -136,6 +165,10 @@ namespace Prototype
             public Color color;
             // 諡｡螟ｧ縺檎ｵゅｏ縺｣縺溘→縺阪・蜊雁ｾ・ｼ医Ρ繝ｼ繝ｫ繝牙腰菴搾ｼ峨・
             public float radius;
+            // 蜃ｺ迴ｾ譎ゅ・蜊雁ｾ・ょｼｾ豸医＠縺ｧ縺ｯ繧ｭ繝･繝ｼ縺ｮ蠖薙◆繧雁愛螳壹・螟門捉縺九ｉ謠上￥縲・
+            public float startRadius;
+            // 蜀・′螳悟・縺ｫ豸医∴繧九∪縺ｧ縺ｮ遘呈焚縲・
+            public float duration;
         }
 
         // Android縺ｧ縺ｯ邵ｦ逕ｻ髱｢縺ｫ蝗ｺ螳壹＠縲∵怙蛻昴・繝ｩ繧ｦ繝ｳ繝峨ｒ髢句ｧ九☆繧九・
@@ -172,6 +205,7 @@ namespace Prototype
                 }
             }
 
+            StopCameraShake();
             CompleteHitStop();
             ClearBullets();
             // pulse・壻ｸ隕ｧ縺九ｉ蜿悶ｊ蜃ｺ縺励◆縲∽ｻ雁屓蜃ｦ逅・☆繧句ｯｾ雎｡縲・
@@ -202,10 +236,18 @@ namespace Prototype
             AdvanceFrame(Time.deltaTime, Time.unscaledDeltaTime);
         }
 
+        // 蜈･蜉帙・遘ｻ蜍輔・蜃ｦ逅・ｾ後↓謠冗判逕ｨ縺ｮ謠ｺ繧後ｒ蜉縺医ｋ縲５ime.timeScale縺ｫ縺ｯ萓晏ｭ倥＠縺ｪ縺・・
+        private void LateUpdate()
+        {
+            AdvanceCameraShake(Time.unscaledDeltaTime);
+        }
+
         // deltaTime縺ｯ繧ｲ繝ｼ繝蜀・・邨碁℃遘呈焚縲「nscaledDeltaTime縺ｯ譎る俣蛟咲紫縺ｫ萓晏ｭ倥＠縺ｪ縺・ｮ溽ｵ碁℃遘呈焚縲・
         // 螳滄圀縺ｮUpdate縺ｨ讀懆ｨｼ縺ｧ蜷後§騾ｲ陦悟・逅・ｒ菴ｿ縺・∝●豁｢荳ｭ縺ｮ遘ｻ蜍輔ｄ蠕ｩ蟶ｰ繧堤｢ｺ隱阪〒縺阪ｋ繧医≧縺ｫ縺吶ｋ縲・
         public void AdvanceFrame(float deltaTime, float unscaledDeltaTime)
         {
+            // 謠ｺ繧後ｒ繧ｿ繝・メ蠎ｧ讓吶・螟画鋤縺ｫ豺ｷ縺懊↑縺・る撕豁｢縺励◆謖・〒繝励Ξ繧､繝､繝ｼ縺悟虚縺上・繧帝亟縺舌・
+            RestoreCameraOffset();
             // 蛛懈ｭ｢荳ｭ繧３繧ｭ繝ｼ縺ｧ蜊ｳ蠎ｧ縺ｫ繝ｪ繝医Λ繧､縺ｧ縺阪ｋ縲・
             if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
             {
@@ -442,19 +484,17 @@ namespace Prototype
                     if (bullet.Power == 3 && Sweep(bullet.PreviousPosition - playerFrom,
                         bullet.transform.position - playerTo, bullet.Radius + DragPlayer.Radius * player.Parameters.ParryRange, out _))
                     {
-                        ParryCount++;
-                        if (SoundManager.Instance != null)
-                        {
-                            SoundManager.Instance.PlaySE("ParrySE");
-                        }
-                        ClearBullets();
-                        parryRemaining = 0f;
-                        EmitPulse(playerTo, Color.cyan, 5f);
+                        ResolveParry(playerTo);
                         return;
                     }
                 }
             }
+            // 鬮倬滓兜謫ｲ縺瑚､・焚縺ｮ蠑ｾ繧呈ｨｪ蛻・ｋ蝣ｴ蜷医ｂ謗･隗ｦ鬆・↓蜃ｦ逅・☆繧九・
+            // 譬ｼ荳翫・蠑ｾ縺ｧ繧ｭ繝･繝ｼ縺梧ｶ域ｻ・＠縺溷ｾ後√◎縺ｮ螂･縺ｮ蠑ｾ縺ｾ縺ｧ豸医＠縺ｦ縺励∪縺・％縺ｨ繧帝亟縺舌・
+            if (balloon.CanHit && bullets.Count > 1) bullets.Sort(CompareCueContactOrder);
             // 蜑企勁縺ｧ繝ｪ繧ｹ繝医・豺ｻ蟄励′縺壹ｌ縺ｦ繧よ悴蜃ｦ逅・・蠑ｾ繧帝｣帙・縺輔↑縺・ｈ縺・∝ｾ後ｍ縺九ｉ隱ｿ縺ｹ繧九・
+            // 蜷後§蛻､螳壼玄髢薙〒隍・焚縺ｮ蠑ｾ繧呈ｶ医＠縺ｦ繧ゅ∝､門・繧帝㍾縺ｭ謠上″縺励↑縺・◆繧√・蜊ｰ縲・
+            bool emittedEraseEffect = false;
             // i・壹％縺ｮ郢ｰ繧願ｿ斐＠縺ｧ蜃ｦ逅・☆繧句ｯｾ雎｡縺ｮ逡ｪ蜿ｷ縲よ擅莉ｶ繧呈ｺ縺溘☆髢薙・・分縺ｫ譖ｴ譁ｰ縺吶ｋ縲・
             for (int i = bullets.Count - 1; i >= 0; i--)
             {
@@ -465,17 +505,28 @@ namespace Prototype
                     bullet.transform.position - playerTo, bullet.Radius + DragPlayer.Radius, out float playerTime);
                 // 謨ｵ蠑ｾ縺梧ｰｴ鬚ｨ闊ｹ縺ｸ隗ｦ繧後ｋ譎らせ・・・・・峨よ悴謗･隗ｦ縺ｪ繧臥┌髯仙､ｧ縺ｮ縺ｾ縺ｾ縺ｫ縺吶ｋ縲・
                 float ballTime = float.PositiveInfinity;
-                // 豌ｴ鬚ｨ闊ｹ縺ｮ蠑ｷ縺輔′雜ｳ繧翫※縺翫ｊ縲∫ｧｻ蜍募玄髢薙〒謨ｵ蠑ｾ縺ｫ謗･隗ｦ縺吶ｋ縺九・
-                bool hitsBall = balloon.CanHit && balloon.Power >= bullet.Power && Sweep(
+                // 蠑ｷ縺輔↓髢｢菫ゅ↑縺上く繝･繝ｼ縺ｸ縺ｮ謗･隗ｦ繧定ｪｿ縺ｹ繧九よ磁隗ｦ蠕後↓繝ｬ繝吶Ν縺ｮ螟ｧ蟆上〒邨先棡繧貞・縺代ｋ縲・
+                bool hitsBall = balloon.CanHit && Sweep(
                     bullet.PreviousPosition - balloon.PreviousPosition,
                     bullet.transform.position - balloon.transform.position,
                     bullet.Radius + balloon.HitRadius, out ballTime);
                 // 邏舌・蠑ｾ繧呈ｶ医＆縺ｪ縺・る｢ｨ闊ｹ譛ｬ菴薙′繝励Ξ繧､繝､繝ｼ繧医ｊ蜈医↓蠑ｾ縺ｸ蠖薙◆縺｣縺溘→縺阪□縺鷹亟縺舌・
                 if (hitsBall && (!hitsPlayer || ballTime <= playerTime))
                 {
-                    RemoveBullet(i);
-                    BeginHitStop(bulletHitStop);
-                    continue;
+                    if (balloon.Power >= bullet.Power)
+                    {
+                        // 蜷後Ξ繝吶Ν莉･荳九↑繧画雰蠑ｾ繧呈ｶ医＠縲√く繝･繝ｼ縺ｯ蠑ｷ縺輔→鬟幄｡鯉ｼ丞・霆｢繧堤ｶｭ謖√＠縺ｦ雋ｫ騾壹☆繧九・
+                        if (!emittedEraseEffect)
+                        {
+                            EmitBulletEraseEffect();
+                            emittedEraseEffect = true;
+                        }
+                        RemoveBullet(i);
+                        BeginHitStop(bulletHitStop);
+                        continue;
+                    }
+                    // 譬ｼ荳翫・謨ｵ蠑ｾ縺ｯ谿九ｊ縲√く繝･繝ｼ縺縺代′豸医∴繧九よ雰蠑ｾ縺ｮ繝励Ξ繧､繝､繝ｼ謗･隗ｦ蛻､螳壹・邯咏ｶ壹☆繧九・
+                    balloon.Consume();
                 }
                 if (hitsPlayer)
                 {
@@ -500,8 +551,48 @@ namespace Prototype
             }
         }
 
+        // 蠕後ｍ縺九ｉ蜑企勁縺吶ｋ繝ｫ繝ｼ繝励↓蜷医ｏ縺帙∵磁隗ｦ縺碁≦縺・ｼｾ縺九ｉ譌ｩ縺・ｼｾ縺ｮ鬆・∈荳ｦ縺ｹ繧九・
+        private int CompareCueContactOrder(Bullet left, Bullet right)
+        {
+            return CueContactTime(right).CompareTo(CueContactTime(left));
+        }
+
+        // 繧ｭ繝･繝ｼ縺ｨbullet縺檎ｧｻ蜍募玄髢薙〒謗･隗ｦ縺吶ｋ譎らせ縲よ磁隗ｦ縺励↑縺・ｴ蜷医・譛蠕後↓蜃ｦ逅・☆繧九◆繧∫┌髯仙､ｧ繧定ｿ斐☆縲・
+        private float CueContactTime(Bullet bullet)
+        {
+            // 謗･隗ｦ縺瑚ｵｷ縺阪ｋ譎らせ・亥玄髢薙・髢句ｧ・・樒ｵゆｺ・・峨ょｼｷ縺輔〒縺ｯ邨槭ｊ霎ｼ縺ｾ縺壽ｼ荳翫ｂ蜷ｫ繧√ｋ縲・
+            bool hits = Sweep(bullet.PreviousPosition - balloon.PreviousPosition,
+                bullet.transform.position - balloon.transform.position, bullet.Radius + balloon.HitRadius, out float time);
+            return hits ? time : float.PositiveInfinity;
+        }
+
+        // 繝代Μ繧｣謌仙粥繧堤｢ｺ螳壹☆繧九りｷ晞屬繧・ｼｾ縺ｮ蠑ｷ縺輔ｒ蝠上ｏ縺壹∫ｮ｡逅・ｸｭ縺ｮ謨ｵ蠑ｾ繧貞叉蠎ｧ縺ｫ蜈ｨ豸亥悉縺吶ｋ縲・
+        // 蜿嶺ｻ倥ｂ邨ゆｺ・＆縺帙∝酔縺俶兜謫ｲ縺ｧ繝代Μ繧｣蝗樊焚繧・ｼ泌・縺碁㍾隍・＠縺ｪ縺・ｈ縺・↓縺吶ｋ縲・
+        private void ResolveParry(Vector3 position)
+        {
+            ParryCount++;
+            
+            // 繝代Μ繧｣謌仙粥縺ｮSE繧貞・逕溘☆繧九・
+            if (SoundManager.Instance != null)
+            {
+                SoundManager.Instance.PlaySE("ParrySE");
+            }
+            parryRemaining = 0f;
+            ClearBullets();
+            EmitPulse(position, Color.cyan, 5f, DragPlayer.Radius * player.Parameters.ParryRange);
+        }
+
+        // 蠑ｾ繧呈遠縺｡豸医＠縺滉ｽ咲ｽｮ縺ｮ繧ｭ繝･繝ｼ螟門捉縺ｫ霈ｪ繧剃ｽ懊ｋ縲ょｼｷ蛹悶ｄ繝代ャ繧ｷ繝悶↓繧医ｋ蛻､螳壼濠蠕・ｂ蜿肴丐縺吶ｋ縲・
+        private void EmitBulletEraseEffect()
+        {
+            if (bulletEraseDuration <= 0f) return;
+            EmitPulse(balloon.transform.position, bulletEraseColor,
+                balloon.HitRadius + Mathf.Max(0f, bulletEraseExpansion), balloon.HitRadius,
+                bulletEraseDuration, Mathf.Max(0.001f, bulletEraseWidth), "Bullet erase outer ring");
+        }
+
         // 謚墓憧荳ｭ縺ｮ鬚ｨ闊ｹ縺縺代・繧ｹ縺ｫ蠖薙◆繧九ょｼｱ轤ｹ縺ｨ閭ｴ菴薙・縺・■蜈医↓謗･隗ｦ縺励◆譁ｹ繧呈治逕ｨ縺吶ｋ縲・
-        // 蠑ｱ轤ｹ縺ｪ繧蛾溷ｺｦ縺ｫ蠢懊§縺溘ム繝｡繝ｼ繧ｸ縲∬Χ菴薙↑繧峨ム繝｡繝ｼ繧ｸ縺ｪ縺励〒鬚ｨ闊ｹ繧呈ｶ郁ｲｻ縺吶ｋ縲・
+        // 蠑ｱ轤ｹ縺ｪ繧峨く繝｣繝ｩ謾ｻ謦・鴨縺ｨ繝ｬ繝吶Ν縺ｫ蠢懊§縺溘ム繝｡繝ｼ繧ｸ縲∬Χ菴薙↑繧峨ム繝｡繝ｼ繧ｸ縺ｪ縺励〒鬚ｨ闊ｹ繧呈ｶ郁ｲｻ縺吶ｋ縲・
         public void CheckBossHit()
         {
             if (IsHitStopped) return;
@@ -521,6 +612,7 @@ namespace Prototype
                 BossHealth = Mathf.Max(0f, BossHealth - balloon.CurrentDamage);
                 EmitPulse(weakPoint.position, Color.yellow, 1.6f);
                 StopOnBalloonImpact(weakPointHitStop);
+                BeginCameraShake();
                 Debug.Log($"Prototype: weak point hit. Boss HP {BossHealth:0}/{bossMaxHealth:0}", this);
                 if (BossHealth <= 0f) EndRound(true);
             }
@@ -572,6 +664,7 @@ namespace Prototype
         // 辟｡蜉ｹ蛹悶・繧ｷ繝ｼ繝ｳ遘ｻ蜍輔〒蛛懈ｭ｢繧・兜謫ｲ莠育ｴ・ｒ謖√■雜翫＆縺ｪ縺・ｈ縺・↓縺吶ｋ縲・
         private void OnDisable()
         {
+            StopCameraShake();
             CompleteHitStop();
             if (player != null) player.TryConsumeBufferedRelease(out _);
         }
@@ -624,12 +717,20 @@ namespace Prototype
             for (int i = bullets.Count - 1; i >= 0; i--) RemoveBullet(i);
         }
 
-        // 謖・ｮ壻ｽ咲ｽｮ縺ｫ蠎・′繧句・繧剃ｽ懊ｋ縲Ｓadius縺ｯ譛邨ょ濠蠕・〒縲∝酔譎り｡ｨ遉ｺ縺ｯ8蛟九∪縺ｧ縲・
-        private void EmitPulse(Vector3 position, Color color, float radius)
+        // position繧剃ｸｭ蠢・↓startRadius縺九ｉradius縺ｸ蠎・′繧句・繧偵‥uration遘帝俣陦ｨ遉ｺ縺吶ｋ縲・
+        // width縺ｯ邱壹・螟ｪ縺輔‘ffectName縺ｯHierarchy縺ｧ貍泌・繧定ｭ伜挨縺吶ｋ蜷榊燕縲ょ酔譎り｡ｨ遉ｺ縺ｯ8蛟九∪縺ｧ縲・
+        private void EmitPulse(Vector3 position, Color color, float radius, float startRadius = 0.2f,
+            float duration = 0.45f, float width = 0.07f, string effectName = "Gameplay pulse")
         {
-            if (pulses.Count >= 8) return;
+            // 荳企剞譎ゅ・蜿､縺・ｼｪ繧堤ｵゆｺ・＠縲∵眠縺励￥襍ｷ縺阪◆蠑ｾ豸医＠繧・ヱ繝ｪ繧｣縺ｮ貍泌・繧貞ｿ・★陦ｨ遉ｺ縺吶ｋ縲・
+            if (pulses.Count >= 8)
+            {
+                pulses[0].line.gameObject.SetActive(false);
+                Destroy(pulses[0].line.gameObject);
+                pulses.RemoveAt(0);
+            }
             // 蜀・ｽ｢繧ｨ繝輔ぉ繧ｯ繝育畑縺ｫ菴懊ｋ荳譎ら噪縺ｪGameObject縲・
-            var go = new GameObject("Gameplay pulse");
+            var go = new GameObject(effectName);
             go.transform.SetParent(transform);
             go.transform.position = position;
             // 邱壹ｒ陦ｨ遉ｺ縺吶ｋLineRenderer縲・
@@ -638,18 +739,64 @@ namespace Prototype
             line.useWorldSpace = false;
             line.loop = true;
             line.positionCount = 40;
-            line.widthMultiplier = 0.07f;
+            line.widthMultiplier = width;
             line.startColor = line.endColor = color;
             // i・壹％縺ｮ郢ｰ繧願ｿ斐＠縺ｧ蜃ｦ逅・☆繧句ｯｾ雎｡縺ｮ逡ｪ蜿ｷ縲よ擅莉ｶ繧呈ｺ縺溘☆髢薙・・分縺ｫ譖ｴ譁ｰ縺吶ｋ縲・
             for (int i = 0; i < 40; i++)
             {
                 // 蜀・捉荳翫・驟咲ｽｮ縺ｫ菴ｿ逕ｨ縺吶ｋ隗貞ｺｦ・医Λ繧ｸ繧｢繝ｳ・峨・
                 float angle = i * Mathf.PI * 2f / 40f;
-                line.SetPosition(i, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * 0.2f);
+                line.SetPosition(i, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * startRadius);
             }
-            pulses.Add(new Pulse { line = line, color = color, radius = radius });
+            pulses.Add(new Pulse { line = line, color = color, radius = radius,
+                startRadius = startRadius, duration = Mathf.Max(0.001f, duration) });
         }
-        // 蜀・ｒ0.45遘偵〒諡｡螟ｧ繝ｻ證励￥縺励∝ｯｿ蜻ｽ繧定ｿ弱∴縺溘ｉ蜑企勁縺吶ｋ縲・
+
+        // 蠑ｱ轤ｹ蜻ｽ荳ｭ縺ｮ迸ｬ髢薙↓謠ｺ繧後ｒ髢句ｧ九☆繧九ょ商縺・ｽ咲ｽｮ縺ｮ縺壹ｌ繧呈ｮ九＆縺壹・｣邯壼多荳ｭ縺ｧ縺ｯ貍泌・繧呈峩譁ｰ縺吶ｋ縲・
+        private void BeginCameraShake()
+        {
+            StopCameraShake();
+            if (gameCamera == null || cameraShakeStrength <= 0f || cameraShakeDuration <= 0f) return;
+            IsCameraShaking = true;
+            cameraShakeElapsed = 0f;
+            AdvanceCameraShake(0f);
+        }
+
+        // unscaledDeltaTime遘偵□縺第昭繧後ｒ騾ｲ繧√ｋ縲ゅヲ繝・ヨ繧ｹ繝医ャ繝嶺ｸｭ繧よｸ幄｡ｰ縺励∫ｵゆｺ・凾縺ｯ蜈・・菴咲ｽｮ縺ｸ謌ｻ縺吶・
+        public void AdvanceCameraShake(float unscaledDeltaTime)
+        {
+            RestoreCameraOffset();
+            if (!IsCameraShaking || gameCamera == null) return;
+            cameraShakeElapsed += Mathf.Max(0f, unscaledDeltaTime);
+            if (cameraShakeDuration <= 0f || cameraShakeElapsed >= cameraShakeDuration)
+            {
+                StopCameraShake();
+                return;
+            }
+            // 貍泌・邨ら乢縺ｻ縺ｩ蟆上＆縺上☆繧区昭繧悟ｹ・ゅご繝ｼ繝蜀・・蛻､螳壻ｽ咲ｽｮ縺ｯ蜍輔°縺輔↑縺・・
+            float amplitude = cameraShakeStrength * (1f - cameraShakeElapsed / cameraShakeDuration);
+            // 譎る俣縺九ｉ豎ｺ縺ｾ繧区険蜍輔・菴咲嶌縲ゆｹｱ謨ｰ繧剃ｽｿ繧上★縲∵､懆ｨｼ譎ゅｂ蜷後§謠ｺ繧後ｒ蜀咲樟縺ｧ縺阪ｋ縲・
+            float phase = cameraShakeElapsed * Mathf.PI * 2f * cameraShakeFrequency;
+            cameraShakeOffset = (gameCamera.transform.right * Mathf.Cos(phase)
+                + gameCamera.transform.up * Mathf.Cos(phase * 0.73f + 1f)) * amplitude;
+            gameCamera.transform.position += cameraShakeOffset;
+        }
+
+        // 譛蠕後↓蜉縺医◆謠冗判逕ｨ縺ｮ縺壹ｌ縺縺代ｒ蜿悶ｊ髯､縺阪√き繝｡繝ｩ譛ｬ譚･縺ｮ菴咲ｽｮ繧剃ｿ晄戟縺吶ｋ縲・
+        private void RestoreCameraOffset()
+        {
+            if (gameCamera != null) gameCamera.transform.position -= cameraShakeOffset;
+            cameraShakeOffset = Vector3.zero;
+        }
+
+        // 繝ｪ繝医Λ繧､縲∫┌蜉ｹ蛹悶∵昭繧檎ｵゆｺ・〒蜻ｼ縺ｶ蠕檎援莉倥￠縲ゅき繝｡繝ｩ縺ｮ縺壹ｌ繧呈ｬ｡縺ｮ繝ｩ繧ｦ繝ｳ繝峨↓謖√■雜翫＆縺ｪ縺・・
+        private void StopCameraShake()
+        {
+            RestoreCameraOffset();
+            IsCameraShaking = false;
+            cameraShakeElapsed = 0f;
+        }
+        // 蜀・ｒ謖・ｮ壹＠縺溯｡ｨ遉ｺ譎る俣縺ｧ諡｡螟ｧ繝ｻ證励￥縺励∝ｯｿ蜻ｽ繧定ｿ弱∴縺溘ｉ蜊ｳ蠎ｧ縺ｫ髱櫁｡ｨ遉ｺ縺ｫ縺励※蜑企勁縺吶ｋ縲・
         private void UpdatePulses(float dt)
         {
             // i・壹％縺ｮ郢ｰ繧願ｿ斐＠縺ｧ蜃ｦ逅・☆繧句ｯｾ雎｡縺ｮ逡ｪ蜿ｷ縲よ擅莉ｶ繧呈ｺ縺溘☆髢薙・・分縺ｫ譖ｴ譁ｰ縺吶ｋ縲・
@@ -659,9 +806,10 @@ namespace Prototype
                 var pulse = pulses[i];
                 pulse.age += dt;
                 // 繧ｨ繝輔ぉ繧ｯ繝医・蟇ｿ蜻ｽ縺ｫ蟇ｾ縺吶ｋ邨碁℃蜑ｲ蜷医・縺ｫ縺ｪ繧九→蜑企勁縺吶ｋ縲・
-                float t = pulse.age / 0.45f;
+                float t = pulse.age / pulse.duration;
                 if (t >= 1f)
                 {
+                    pulse.line.gameObject.SetActive(false);
                     Destroy(pulse.line.gameObject);
                     pulses.RemoveAt(i);
                     continue;
@@ -675,7 +823,7 @@ namespace Prototype
                 {
                     // 蜀・捉荳翫・驟咲ｽｮ縺ｫ菴ｿ逕ｨ縺吶ｋ隗貞ｺｦ・医Λ繧ｸ繧｢繝ｳ・峨・
                     float angle = j * Mathf.PI * 2f / 40;
-                    pulse.line.SetPosition(j, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Lerp(0.2f, pulse.radius, t));
+                    pulse.line.SetPosition(j, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Lerp(pulse.startRadius, pulse.radius, t));
                 }
             }
         }

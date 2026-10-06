@@ -110,7 +110,7 @@ namespace Prototype.Editor
             playerInstance.transform.position = new Vector3(0f, 0.65f, -4.5f);
             // シーン内へ配置した水風船Prefabの実体。
             var ballInstance = (GameObject)PrefabUtility.InstantiatePrefab(balloonPrefab, gameplay.transform);
-            ballInstance.transform.position = playerInstance.transform.position + Vector3.back * 1.35f;
+            ballInstance.transform.position = playerInstance.transform.position + Vector3.forward * 1.35f;
             // シーン上の水風船に付いている紐のLineRenderer。
             var instanceLine = ballInstance.GetComponent<LineRenderer>();
             instanceLine.SetPosition(0, playerInstance.transform.position);

@@ -155,7 +155,7 @@ namespace Prototype.Editor
             Vector3 beforeFlick = ball.Velocity;
             ball.Launch(Vector3.forward * 10f);
             Check(ball.Velocity.z > beforeFlick.z + 7f, "Flick adds directional force");
-            Check(WaterBalloon.DamageAtSpeed(20f) > WaterBalloon.DamageAtSpeed(5f), "Faster throws deal more damage");
+            Check(Mathf.Approximately(ball.CurrentDamage, player.Parameters.AttackPower), "Tier one damage uses character attack power");
             // 連続衝突判定の検証：1回で遠くへ動いても、通過した対象への接触を検出できる。
             Check(PrototypeArena.Sweep(new Vector3(-10, 0, 0), new Vector3(10, 0, 0), 0.5f, out _), "Fast projectile sweep cannot tunnel");
             Check(!PrototypeArena.Sweep(new Vector3(-10, 0, 2), new Vector3(10, 0, 2), 0.5f, out _), "Sweep rejects a near miss");
@@ -211,6 +211,226 @@ namespace Prototype.Editor
             arena.ResetRound();
             RunParameterChecks(arena, player, ball);
             RunHitStopChecks(arena, player, ball, camera);
+            RunParryEffectChecks(arena, player, ball);
+            RunSpecificationChecks(arena, player, ball, camera);
+        }
+
+        // 仕様書のレベル別攻撃力・貫通・復活位置・弱点演出を、保存済みシーン上で検証する。
+        private static void RunSpecificationChecks(PrototypeArena arena, DragPlayer player, WaterBalloon ball, Camera camera)
+        {
+            arena.ResetRound();
+            // 復活と衝突の基準にするプレイヤー位置。
+            Vector3 anchor = player.transform.position;
+            // Lv.1～3に対応する、仕様書の青・オレンジ・紫の表示色。
+            Color[] colors = { new Color(0.1f, 0.35f, 1f), new Color(1f, 0.5f, 0f), new Color(0.65f, 0f, 1f) };
+            // levelは検証するキューの強さ。全レベルについてダメージと色を確認する。
+            for (int level = 1; level <= 3; level++)
+            {
+                ChargeToLevel(ball, anchor, level);
+                Check(Mathf.Approximately(ball.CurrentDamage, player.Parameters.AttackPower * (level == 1 ? 1f : 2f)),
+                    $"Tier {level} damage matches the confirmed character attack multiplier");
+                // キュー本体に実際に渡された描画色を取得するためのプロパティ。
+                var properties = new MaterialPropertyBlock();
+                ball.GetComponentInChildren<MeshRenderer>().GetPropertyBlock(properties);
+                Check(properties.GetColor("_BaseColor") == colors[level - 1], $"Tier {level} uses the specified cue color");
+                ball.Launch(Vector3.forward * 2f);
+                // 低速投擲時のダメージ。高速で投げてもレベル倍率以外が加わらないことを確認する。
+                float slowDamage = ball.CurrentDamage;
+                ChargeToLevel(ball, anchor, level);
+                ball.Launch(Vector3.forward * 18f);
+                Check(Mathf.Approximately(ball.CurrentDamage, slowDamage), $"Tier {level} damage is independent of throw speed");
+                // flyingは0なら公転、1なら投擲。どちらの状態にも同じ貫通ルールを適用する。
+                for (int flying = 0; flying <= 1; flying++)
+                {
+                    // enemyLevelは接触させる敵弾の強さ。3×3の全組み合わせを検証する。
+                    for (int enemyLevel = 1; enemyLevel <= 3; enemyLevel++)
+                    {
+                        arena.ResetRound();
+                        ChargeToLevel(ball, anchor, level);
+                        if (flying == 1) ball.Launch(Vector3.forward);
+                        // 衝突前の状態。貫通したときに飛行・公転を維持することを確かめる。
+                        WaterBalloon.MotionState before = ball.State;
+                        arena.SpawnBullet(ball.transform.position, Vector3.zero, enemyLevel);
+                        arena.TickBullets(anchor, anchor, 0f);
+                        Check(level >= enemyLevel
+                            ? arena.ActiveBulletCount == 0 && ball.State == before && ball.Power == level
+                            : arena.ActiveBulletCount == 1 && ball.State == WaterBalloon.MotionState.Recovering,
+                            $"Cue tier {level}, enemy tier {enemyLevel}, flying {flying}: penetration or cue destruction matches specification");
+                    }
+                }
+            }
+
+            // orderは格上が手前なら0、同レベルが手前なら1。生成順に依存せず接触順で解決する。
+            for (int order = 0; order <= 1; order++)
+            {
+                arena.ResetRound();
+                ball.Simulate(anchor, Vector3.zero, true, 0f);
+                // 飛行区間の始点。ここから奥へ敵弾を2発並べる。
+                Vector3 launchPosition = ball.transform.position;
+                // 手前の弾を先に生成し、単純な逆順ループなら奥から判定される状況を作る。
+                Bullet nearBullet = arena.SpawnBullet(launchPosition + Vector3.forward, Vector3.zero, order == 0 ? 3 : 1);
+                // 奥の弾は格上に遮られる場合は残り、手前が同レベルの場合だけキューがここまで届く。
+                Bullet farBullet = arena.SpawnBullet(launchPosition + Vector3.forward * 2f, Vector3.zero, order == 0 ? 1 : 3);
+                ball.Launch(Vector3.forward * 18f);
+                ball.Simulate(anchor, Vector3.zero, false, 0.2f);
+                arena.TickBullets(anchor, anchor, 0f);
+                Check(ball.State == WaterBalloon.MotionState.Recovering && farBullet.gameObject.activeSelf
+                    && nearBullet.gameObject.activeSelf == (order == 0) && arena.ActiveBulletCount == (order == 0 ? 2 : 1),
+                    $"Swept contacts resolve in travel order and stop erasing beyond a stronger bullet, order {order}");
+            }
+
+            arena.ResetRound();
+            ball.Consume();
+            ball.Simulate(anchor, Vector3.zero, false, 0.99f);
+            Check(ball.State == WaterBalloon.MotionState.Recovering, "Cue stays hidden until one second after destruction");
+            // 回復待ちの間にプレイヤーが移動した場合でも、新しい位置の上方へ戻る。
+            Vector3 movedAnchor = anchor + Vector3.right;
+            ball.Simulate(movedAnchor, Vector3.zero, false, 0.02f);
+            Check(ball.State == WaterBalloon.MotionState.Ready && ball.Power == 1
+                && Vector3.Distance(ball.transform.position, movedAnchor + Vector3.forward * 1.35f) < 0.001f,
+                "Cue respawns at tier one above the player's current position after one second");
+
+            arena.ResetRound();
+            // シェイク前のカメラ位置。入力判定・終了・無効化の各場面で戻るか確認する。
+            Vector3 cameraPosition = camera.transform.position;
+            ThrowAt(ball, arena, new Vector3(0f, 0.65f, 4.45f), finishHitStop: false);
+            Check(arena.IsHitStopped && arena.IsCameraShaking && camera.transform.position != cameraPosition,
+                "Weak-point hit starts hit stop and camera shake together");
+            arena.AdvanceFrame(0f, 0f);
+            Check(Vector3.Distance(camera.transform.position, cameraPosition) < 0.0001f,
+                "Input is read with the camera shake offset removed");
+            arena.AdvanceCameraShake(0.05f);
+            Check(arena.IsHitStopped && arena.IsCameraShaking && camera.transform.position != cameraPosition,
+                "Camera shake continues during hit stop");
+            arena.AdvanceHitStop(0.149f);
+            Check(arena.IsHitStopped, "Weak-point hit stop lasts at least 0.149 seconds");
+            arena.AdvanceHitStop(0.002f);
+            arena.AdvanceCameraShake(0.101f);
+            Check(!arena.IsHitStopped && !arena.IsCameraShaking
+                && Vector3.Distance(camera.transform.position, cameraPosition) < 0.0001f,
+                "Hit stop and camera shake end after 0.15 seconds without leaving camera drift");
+            ThrowAt(ball, arena, new Vector3(0f, 0.65f, 4.45f), finishHitStop: false);
+            arena.ResetRound();
+            Check(!arena.IsCameraShaking && Vector3.Distance(camera.transform.position, cameraPosition) < 0.0001f,
+                "Retry cancels camera shake and restores the camera");
+            ThrowAt(ball, arena, new Vector3(0f, 0.65f, 4.45f), finishHitStop: false);
+            arena.enabled = true;
+            arena.enabled = false;
+            Check(!arena.IsCameraShaking && Vector3.Distance(camera.transform.position, cameraPosition) < 0.0001f,
+                "Disabling gameplay cancels camera shake and restores the camera");
+            arena.ResetRound();
+        }
+
+        // 実回転の累積処理を使って指定レベルまで育てる。直接レベルを書き換えず成長の経路も通す。
+        private static void ChargeToLevel(WaterBalloon ball, Vector3 anchor, int level)
+        {
+            ball.ResetBalloon(anchor);
+            ball.Simulate(anchor, Vector3.right, true, 0f);
+            // iは2度ずつ回す回数。最大約7周まで回して必要な段階へ到達させる。
+            for (int i = 1; i <= 1300 && ball.Power < level; i++)
+            {
+                // リセット位置の90度から進めた現在の角度。
+                float angle = (90f + i * 2f) * Mathf.Deg2Rad;
+                ball.transform.position = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * 1.35f;
+                ball.Simulate(anchor, Vector3.right, true, 0f);
+            }
+            if (ball.Power != level) throw new InvalidOperationException("Cue could not reach requested level");
+        }
+
+        // パリィの全弾消去と、キュー外周の弾消し演出を実際の衝突処理で確認する。
+        private static void RunParryEffectChecks(PrototypeArena arena, DragPlayer player, WaterBalloon ball)
+        {
+            arena.ResetRound();
+            // 今回のプレイヤー位置。弾幕を離れた場所に配置する基準にも使う。
+            Vector3 anchor = player.transform.position;
+            // 全弾がDestroy待ちの間も即座に非表示になることを確認するための参照。
+            var spawned = new Bullet[96];
+            // iは配置する弾の番号。離れた画面内に強さ1～3を混在させて上限まで出す。
+            for (int i = 0; i < spawned.Length - 1; i++)
+                spawned[i] = arena.SpawnBullet(new Vector3(-3f + i % 7, anchor.y, 1f + i % 3), Vector3.zero, 1 + i % 3);
+            spawned[95] = arena.SpawnBullet(anchor, Vector3.zero, 3);
+            arena.BeginReleaseProtection();
+            arena.TickBullets(anchor, anchor, 0f);
+            Check(arena.ActiveBulletCount == 0 && arena.ParryCount == 1,
+                "Parry clears all 96 projectiles regardless of distance or strength");
+            Check(Array.TrueForAll(spawned, bullet => !bullet.gameObject.activeSelf),
+                "Every cleared projectile disappears immediately before deferred destruction");
+            arena.SpawnBullet(anchor, Vector3.zero, 3);
+            arena.TickBullets(anchor, anchor, 0f);
+            Check(arena.ParryCount == 1, "A successful parry consumes its window and cannot trigger twice");
+
+            arena.ResetRound();
+            ball.Simulate(anchor, Vector3.zero, true, 0f);
+            arena.SpawnBullet(ball.transform.position, Vector3.zero, 1);
+            arena.SpawnBullet(ball.transform.position, Vector3.zero, 1);
+            arena.TickBullets(anchor, anchor, 0f);
+            // 同時に2発を消しても、外円が1つだけ出ることを検証する。
+            LineRenderer[] rings = FindEraseRings(arena);
+            Check(arena.ActiveBulletCount == 0 && rings.Length == 1,
+                "Simultaneous cue blocks emit one outer ring and erase every colliding bullet");
+            // 輪の中心、初期半径、停止後の拡大と消滅を確認する対象。
+            LineRenderer ring = rings[0];
+            Check(ring.transform.position == ball.transform.position && ring.loop
+                && Mathf.Abs(ring.GetPosition(0).magnitude - ball.HitRadius) < 0.001f,
+                "Erase effect starts on the cue collision circumference at the impact position");
+            arena.AdvanceFrame(0.01f, 0.01f);
+            Check(Mathf.Abs(ring.GetPosition(0).magnitude - ball.HitRadius) < 0.001f,
+                "Outer ring stays visible without aging during hit stop");
+            arena.AdvanceHitStop(1f);
+            arena.AdvanceFrame(0.1f, 0.1f);
+            Check(ring.GetPosition(0).magnitude > ball.HitRadius, "Outer ring expands after hit stop");
+            // iは経過フレーム数。0.4秒進めて、初期表示時間0.3秒を確実に超える。
+            for (int i = 0; i < 4; i++) arena.AdvanceFrame(0.1f, 0.1f);
+            Check(FindEraseRings(arena).Length == 0, "Expired outer rings are hidden and removed");
+
+            arena.ResetRound();
+            ball.Simulate(anchor, Vector3.zero, true, 0f);
+            arena.SpawnBullet(ball.transform.position, Vector3.zero, 3);
+            arena.TickBullets(anchor, anchor, 0f);
+            Check(arena.ActiveBulletCount == 1 && FindEraseRings(arena).Length == 0,
+                "A stronger bullet that survives the cue does not emit an erase effect");
+
+            arena.ResetRound();
+            // iは既存の輪の発生回数。表示上限を超えても最新の弾消し演出が出ることを確認する。
+            for (int i = 0; i < 9; i++) arena.BeginReleaseProtection();
+            ball.Simulate(anchor, Vector3.zero, true, 0f);
+            ball.Launch(Vector3.forward);
+            arena.SpawnBullet(ball.transform.position, Vector3.zero, 1);
+            arena.TickBullets(anchor, anchor, 0f);
+            Check(ball.State == WaterBalloon.MotionState.Flying && FindEraseRings(arena).Length == 1,
+                "Flying cue emits its outer ring even when the effect capacity is full");
+            arena.ResetRound();
+            Check(FindEraseRings(arena).Length == 0, "Retry immediately clears remaining outer rings");
+
+            // デザイナーが演出だけを無効にしても、弾消しとヒットストップは残ることを確認する。
+            var serializedArena = new SerializedObject(arena);
+            // 外円の表示時間を編集するInspectorのプロパティ。
+            var durationProperty = serializedArena.FindProperty("bulletEraseDuration");
+            // テスト終了時に復元する表示時間。
+            float originalDuration = durationProperty.floatValue;
+            try
+            {
+                durationProperty.floatValue = 0f;
+                serializedArena.ApplyModifiedPropertiesWithoutUndo();
+                ball.Simulate(anchor, Vector3.zero, true, 0f);
+                arena.SpawnBullet(ball.transform.position, Vector3.zero, 1);
+                arena.TickBullets(anchor, anchor, 0f);
+                Check(arena.ActiveBulletCount == 0 && arena.IsHitStopped && FindEraseRings(arena).Length == 0,
+                    "Zero effect duration disables only the outer ring, preserving erase and hit stop");
+            }
+            finally
+            {
+                durationProperty.floatValue = originalDuration;
+                serializedArena.ApplyModifiedPropertiesWithoutUndo();
+                arena.ResetRound();
+            }
+        }
+
+        // 表示中の弾消し外円だけを取得する。紐やDestroy待ちの非表示エフェクトは含めない。
+        private static LineRenderer[] FindEraseRings(PrototypeArena arena)
+        {
+            return Array.FindAll(arena.GetComponentsInChildren<LineRenderer>(),
+                line => line.gameObject.name == "Bullet erase outer ring");
         }
 
         // arena/player/ball/cameraは検証シーンの対象。命中時の停止・復帰と停止中の入力を確認する。
@@ -238,7 +458,7 @@ namespace Prototype.Editor
             Check(arena.IsHitStopped && bullet.transform.position == bulletPosition
                 && ball.transform.position == ballPosition && player.transform.position == playerPosition,
                 "Hit stop freezes player, cue and enemy bullets using real time");
-            arena.AdvanceFrame(0.5f, 0.05f);
+            arena.AdvanceFrame(0.5f, 0.12f);
             Check(!arena.IsHitStopped && ball.State == WaterBalloon.MotionState.Recovering
                 && bullet.transform.position == bulletPosition && Time.timeScale == timeScale,
                 "Hit stop ends on real time and consumes cue without changing global time scale");
@@ -321,8 +541,8 @@ namespace Prototype.Editor
             // iは2度単位の更新回数。1200回で約6.67周となり、強さ3までの閾値を越える。
             for (int i = 1; i <= 1200; i++)
             {
-                // 初期位置の-90度から指定方向へ進めた角度（ラジアン）。
-                float angle = (-90f + direction * i * 2f) * Mathf.Deg2Rad;
+                // 初期位置の90度から指定方向へ進めた角度（ラジアン）。
+                float angle = (90f + direction * i * 2f) * Mathf.Deg2Rad;
                 ball.transform.position = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
                 // 加算前の進捗。±180度をまたぐ更新や逆回転でも減らないことを確認する。
                 float previousCharge = ball.ChargedRevolutions;
@@ -390,11 +610,12 @@ namespace Prototype.Editor
 
                 parameters.ResetPassiveMultipliers();
                 ball.Consume();
-                ball.Simulate(player.transform.position, Vector3.zero, false, 0.34f);
-                Check(ball.State == WaterBalloon.MotionState.Recovering, "Default reproduction still waits after 0.34 seconds");
+                ball.Simulate(player.transform.position, Vector3.zero, false, 0.51f);
+                Check(ball.State == WaterBalloon.MotionState.Recovering, "Default reproduction still waits after 0.51 seconds");
                 parameters.SetPassiveMultipliers(cueReproduction: 2f);
+                ball.ResetBalloon(player.transform.position);
                 ball.Consume();
-                ball.Simulate(player.transform.position, Vector3.zero, false, 0.34f);
+                ball.Simulate(player.transform.position, Vector3.zero, false, 0.51f);
                 Check(ball.State == WaterBalloon.MotionState.Ready, "Double reproduction speed halves recovery time");
 
                 parameters.ResetPassiveMultipliers();
@@ -447,8 +668,8 @@ namespace Prototype.Editor
         private static void ThrowAt(WaterBalloon ball, PrototypeArena arena, Vector3 target, bool finishHitStop = true)
         {
             arena.AdvanceHitStop(1f);
-            ball.ResetBalloon(target + Vector3.forward * 1.35f);
-            ball.Simulate(target + Vector3.forward * 1.35f, Vector3.zero, true, 0.001f);
+            ball.ResetBalloon(target - Vector3.forward * 1.35f);
+            ball.Simulate(target - Vector3.forward * 1.35f, Vector3.zero, true, 0.001f);
             ball.Launch(Vector3.forward * 18f);
             arena.CheckBossHit();
             if (finishHitStop) arena.AdvanceHitStop(1f);
