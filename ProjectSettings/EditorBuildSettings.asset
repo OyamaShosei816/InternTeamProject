@@ -15,7 +15,7 @@ EditorBuildSettings:
     path: Assets/Scenes/Kazuma.unity
     guid: b7d5ff132af3d1f409ef111362d91bda
   - enabled: 0
-    path: Assets/Scenes/PlayerStock.unity
+    path: Assets/Scenes/Old_Scene/PlayerStock.unity
     guid: da46409f113dff942a4fa3ca0c86456e
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

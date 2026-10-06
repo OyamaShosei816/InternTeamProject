@@ -125,8 +125,11 @@ namespace KazumaPrototype
         // Androidでは縦画面に固定し、最初�Eラウンドを開始する、E
         private void Start()
         {
-            SoundManager.Instance.PlayBGM("BattleBGM");
-            if (Application.platform == RuntimePlatform.Android) Screen.orientation = ScreenOrientation.Portrait;
+            if (SoundManager.Instance != null)
+            {
+                SoundManager.Instance.PlayBGM("Stage1BGM");
+            }
+                if (Application.platform == RuntimePlatform.Android) Screen.orientation = ScreenOrientation.Portrait;
             ResetRound();
         }
 
@@ -248,7 +251,6 @@ namespace KazumaPrototype
         // ============================================================
         private void DamagePlayer()
         {
-            SoundManager.Instance.PlaySE("DamageSE");
             // ���ł�GameOver�Ȃ牽�����Ȃ�
             if (isGameOver)
             {
@@ -259,6 +261,13 @@ namespace KazumaPrototype
             if (damageInvincibleTimer > 0.0f)
             {
                 return;
+            }
+            else
+            {
+                if (SoundManager.Instance != null)
+                {
+                    SoundManager.Instance.PlaySE("PlayerDamageSE");
+                }
             }
 
             // ---------------------------------------------------------
@@ -393,6 +402,10 @@ namespace KazumaPrototype
                         bullet.transform.position - playerTo, bullet.Radius + KazumaDragPlayer.Radius * player.Parameters.ParryRange, out _))
                     {
                         ParryCount++;
+                        if (SoundManager.Instance != null)
+                        {
+                            SoundManager.Instance.PlaySE("ParrySE");
+                        }
                         ClearBullets();
                         parryRemaining = 0f;
                         EmitPulse(playerTo, Color.cyan, 5f);
@@ -458,6 +471,10 @@ namespace KazumaPrototype
                 balloon.transform.position - boss.position, balloon.HitRadius + 1.15f, out float bodyTime);
             if (weakHit && (!bodyHit || weakTime <= bodyTime))
             {
+                if (SoundManager.Instance != null)
+                {
+                    SoundManager.Instance.PlaySE("BossWeakSE");
+                }
                 BossHealth = Mathf.Max(0f, BossHealth - balloon.CurrentDamage);
                 EmitPulse(weakPoint.position, Color.yellow, 1.6f);
                 balloon.Consume();
@@ -466,6 +483,10 @@ namespace KazumaPrototype
             }
             else if (bodyHit)
             {
+                if (SoundManager.Instance != null)
+                {
+                    SoundManager.Instance.PlaySE("BossDamageSE");
+                }
                 EmitPulse(balloon.transform.position, Color.gray, 0.7f);
                 balloon.Consume();
             }

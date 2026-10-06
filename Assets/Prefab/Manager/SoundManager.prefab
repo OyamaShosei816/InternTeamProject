@@ -45,8 +45,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SoundManager
   bgmData:
-  - name: 
-    audioClip: {fileID: 0}
-    volume: 0
+  - name: Stage1BGM
+    audioClip: {fileID: 8300000, guid: f5988f9822db0b04bb105821a96aac27, type: 3}
+    volume: 0.5
+    isLoop: 1
+  seData:
+  - name: PlayerDamageSE
+    audioClip: {fileID: 8300000, guid: 0f17fb0ad60388c48a85821341690967, type: 3}
+    volume: 0.7
     isLoop: 0
-  seData: []
+  - name: ParrySE
+    audioClip: {fileID: 8300000, guid: a3dddfe511b080c438e6943b81b14fb9, type: 3}
+    volume: 0.7
+    isLoop: 0
+  - name: BossDamageSE
+    audioClip: {fileID: 8300000, guid: 15b59c374f9819243aa148b0ad5f9788, type: 3}
+    volume: 0.7
+    isLoop: 0
+  - name: BossWeakSE
+    audioClip: {fileID: 8300000, guid: a27754403db1cdc42ba789bdf5f7fa99, type: 3}
+    volume: 0.7
+    isLoop: 0
