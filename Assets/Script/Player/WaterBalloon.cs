@@ -148,10 +148,10 @@ namespace KazumaPrototype
                 offset = transform.position - anchor;
                 // プレイヤーから見た水風船の現在の角度（度）。
                 float angle = Mathf.Atan2(offset.z, offset.x) * Mathf.Rad2Deg;
-                // 前回から実際に回った角度（ラジアン）。逆回転なら負になる。
-                float turned = Mathf.DeltaAngle(previousAngle, angle) * Mathf.Deg2Rad;
+                // 前回から実際に回った角度の大きさ（ラジアン）。右回り・左回りの両方を加算する。
+                float turned = Mathf.Abs(Mathf.DeltaAngle(previousAngle, angle)) * Mathf.Deg2Rad;
                 // 押しながらプレイヤーが動いているときだけ、風船の実際の回転角度を強化に加える。
-                // 逆回転では進捗が減るが、すでに到達した強さの下限よりは減らさない。
+                // 途中で回転方向を変えても、それまでに蓄積した強化量は減らさない。
                 if (held && movement > 0.15f && offset.sqrMagnitude > 0.25f)
                     chargedRadians = Mathf.Max((Power - 1) * Mathf.PI * 2f * revolutionsPerLevel, chargedRadians + turned * Parameters.CueGrowth);
                 previousAngle = angle;
@@ -198,8 +198,8 @@ namespace KazumaPrototype
         private void UpdateAppearance(Vector3 anchor)
         {
             if (properties == null) properties = new MaterialPropertyBlock();
-            // 強さ1は緑、2は黄、3は紫で表示するための色。
-            Color color = Power == 1 ? new Color(0.25f, 1f, 0.3f) : Power == 2 ? new Color(1f, 0.8f, 0.1f) : new Color(1f, 0.25f, 0.85f);
+            // キューと敵弾共通の色分け：Lv.1は青、Lv.2はオレンジ、Lv.3は紫。
+            Color color = Power == 1 ? new Color(0.1f, 0.35f, 1f) : Power == 2 ? new Color(1f, 0.5f, 0f) : new Color(0.65f, 0f, 1f);
             properties.SetColor("_BaseColor", color);
             properties.SetColor("_Color", color);
             body.SetPropertyBlock(properties);

@@ -27,8 +27,8 @@ namespace KazumaPrototype
             transform.localScale = Vector3.one * Radius * 2f;
             // 共有マテリアル自体を変更せず、この弾だけの色を設定する。
             var properties = new MaterialPropertyBlock();
-            // 強さ1は緑、2は黄、3は紫で表示するための色。
-            Color color = Power == 1 ? new Color(0.25f, 1f, 0.3f) : Power == 2 ? new Color(1f, 0.8f, 0.1f) : new Color(1f, 0.25f, 0.85f);
+            // キューと敵弾共通の色分け：Lv.1は青、Lv.2はオレンジ、Lv.3は紫。
+            Color color = Power == 1 ? new Color(0.1f, 0.35f, 1f) : Power == 2 ? new Color(1f, 0.5f, 0f) : new Color(0.65f, 0f, 1f);
             properties.SetColor("_BaseColor", color);
             properties.SetColor("_Color", color);
             body.SetPropertyBlock(properties);
