@@ -148,10 +148,11 @@ namespace KazumaPrototype
                 offset = transform.position - anchor;
                 // プレイヤーから見た水風船の現在の角度（度）。
                 float angle = Mathf.Atan2(offset.z, offset.x) * Mathf.Rad2Deg;
-                // 前回から実際に回った角度（ラジアン）。逆回転なら負になる。
-                float turned = Mathf.DeltaAngle(previousAngle, angle) * Mathf.Deg2Rad;
+                // 前回から実際に回った角度の大きさ（ラジアン）。
+                // 右回りは角度差が負になるため、絶対値を使って左右どちらも強化に加える。
+                float turned = Mathf.Abs(Mathf.DeltaAngle(previousAngle, angle)) * Mathf.Deg2Rad;
                 // 押しながらプレイヤーが動いているときだけ、風船の実際の回転角度を強化に加える。
-                // 逆回転では進捗が減るが、すでに到達した強さの下限よりは減らさない。
+                // 途中で回転方向を変えても、それまでの強化進捗は減らさない。
                 if (held && movement > 0.15f && offset.sqrMagnitude > 0.25f)
                     chargedRadians = Mathf.Max((Power - 1) * Mathf.PI * 2f * revolutionsPerLevel, chargedRadians + turned * Parameters.CueGrowth);
                 previousAngle = angle;
