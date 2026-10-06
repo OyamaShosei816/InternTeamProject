@@ -39,6 +39,20 @@ namespace KazumaPrototype
         [Tooltip("シーン内の弱点のTransformを設定します。")]
         [SerializeField] private Transform weakPoint;
 
+        // ============================================================
+        // 敵弾幕制御：BulletPattern参照
+        // ============================================================
+        // Bossが使用する6種類の弾幕そのものはBulletPattern側で管理する。
+        // Arena側はこの参照を通して、
+        //
+        // ・どのPatternを発射するか
+        // ・現在まだ弾幕を生成中か
+        // ============================================================
+        [Header("敵の攻撃：弾幕パターン")]
+        [Tooltip("6種類の敵弾幕を管理しているBulletPatternを設定します。")]
+        [SerializeField]
+        private BulletPattern bulletPattern;
+
         // 命中やパリィなどの円形エフェクトに使用する。
         [Header("演出：円形エフェクトの素材")]
         [Tooltip("エフェクトのLineRendererに使用するマテリアルを設定します。")]
@@ -49,16 +63,206 @@ namespace KazumaPrototype
         [SerializeField] private float bossMaxHealth = 150f;
 
         [Header("難易度：弾の発射間隔")]
-        [Tooltip("弾を発射する間隔です。単位は秒です。最初の発射は開始から2.5秒後です。")]
+        [Tooltip("弾を発射する間隔")]
         [SerializeField] private float shotInterval = 1.5f;
 
-        [Header("救済：投げた直後の無敵時間")]
-        [Tooltip("水風船を投げた直後の無敵時間です。単位は秒です。")]
+        [Header("キュー：無敵時間")]
+        [Tooltip("キューを投げた直後の無敵時間")]
         [SerializeField] private float releaseInvulnerability = 0.22f;
 
         [Header("パリィ：投擲後の受付時間")]
-        [Tooltip("投擲後にパリィが成立する受付時間です。単位は秒です。")]
+        [Tooltip("投擲後にパリィが成立する受付時間")]
         [SerializeField] private float parryWindow = 0.12f;
+
+        // ============================================================
+        // 敵攻撃ルーティン設定
+        // ============================================================
+        [Header("敵攻撃ルーティン：各攻撃パターン後インターバル")]
+        [Tooltip("Pattern1インターバル")]
+        [SerializeField, Min(0.0f)]
+        private float pattern1Interval = 2.0f;
+
+        [Tooltip("Pattern2インターバル")]
+        [SerializeField, Min(0.0f)]
+        private float pattern2Interval = 2.0f;
+
+        [Tooltip("Pattern3インターバル")]
+        [SerializeField, Min(0.0f)]
+        private float pattern3Interval = 2.0f;
+
+        [Tooltip("Pattern4インターバル")]
+        [SerializeField, Min(0.0f)]
+        private float pattern4Interval = 2.0f;
+
+        [Tooltip("Pattern5インターバル")]
+        [SerializeField, Min(0.0f)]
+        private float pattern5Interval = 2.0f;
+
+        [Tooltip("Pattern6インターバル")]
+        [SerializeField, Min(0.0f)]
+        private float pattern6Interval = 2.0f;
+
+        // ============================================================
+        // 敵行動のランダム抽選設定
+        // ============================================================
+        // 画像の仕様:
+        //
+        // 行動1 : Pattern1 → Pattern2 → Pattern4
+        // 行動2 : Pattern2 → Pattern4
+        // 行動3 : Pattern3
+        // 行動4 : Pattern2 → Pattern3
+        //
+        // weightは「確率そのもの」ではなく抽選時の重み。
+        // 例えば全部25なら、それぞれ25%になる。
+        // 10 / 20 / 30 / 40なら
+        // 10% / 20% / 30% / 40%になる。
+        // ============================================================
+        [Header("敵行動：通常時の抽選確率（Weightなので合計が100％にする）")]
+
+        [Tooltip("行動1：Pattern1 → Pattern2 → Pattern4の抽選")]
+        [SerializeField, Min(0.0f)]
+        private float action1Weight = 25.0f;
+
+        [Tooltip("行動2：Pattern2 → Pattern4の抽選")]
+        [SerializeField, Min(0.0f)]
+        private float action2Weight = 25.0f;
+
+        [Tooltip("行動3：Pattern3の抽選")]
+        [SerializeField, Min(0.0f)]
+        private float action3Weight = 25.0f;
+
+        [Tooltip("行動4：Pattern2 → Pattern3の抽選")]
+        [SerializeField, Min(0.0f)]
+        private float action4Weight = 25.0f;
+
+        // ============================================================
+        // HP半分以下での抽選補正
+        // ============================================================
+
+        [Header("敵行動：HP低下時の抽選補正")]
+
+        [Tooltip("このHP割合以下になると行動3・4の確率を上昇させる")]
+        [SerializeField, Range(0.0f, 1.0f)]
+        private float lowHpThreshold = 0.5f;
+
+        [Tooltip("HP低下時の行動3の抽選倍率")]
+        [SerializeField, Min(1.0f)]
+        private float action3LowHpMultiplier = 2.0f;
+
+        [Tooltip("HP低下時の行動4の抽選倍率")]
+        [SerializeField, Min(1.0f)]
+        private float action4LowHpMultiplier = 2.0f;
+
+        // ============================================================
+        // Pattern同時発動設定
+        // ============================================================
+        [Header("敵行動：Pattern同時発動")]
+        [Tooltip("選ばれたPatternと別Patternを同時発動する確率")]
+        [SerializeField, Range(0.0f, 100.0f)]
+        private float simultaneousPatternChance = 20.0f;
+
+        [Tooltip("同時発動時に追加されるPattern1の抽選ウェイト")]
+        [SerializeField, Min(0.0f)]
+        private float simultaneousPattern1Weight = 10.0f;
+
+        [Tooltip("同時発動時に追加されるPattern2の抽選ウェイト")]
+        [SerializeField, Min(0.0f)]
+        private float simultaneousPattern2Weight = 10.0f;
+
+        [Tooltip("同時発動時に追加されるPattern3の抽選ウェイト")]
+        [SerializeField, Min(0.0f)]
+        private float simultaneousPattern3Weight = 10.0f;
+
+        [Tooltip("同時発動時に追加されるPattern4の抽選ウェイト")]
+        [SerializeField, Min(0.0f)]
+        private float simultaneousPattern4Weight = 10.0f;
+
+        [Tooltip("同時発動時に追加されるPattern5の抽選ウェイト")]
+        [SerializeField, Min(0.0f)]
+        private float simultaneousPattern5Weight = 10.0f;
+
+        [Tooltip("同時発動時に追加されるPattern6の抽選ウェイト")]
+        [SerializeField, Min(0.0f)]
+        private float simultaneousPattern6Weight = 10.0f;
+
+        [Header("強攻撃：弾幕が薄くなった判定")]
+        [Tooltip("画面に残っている弾幕がこの数以下になると強攻撃開始")]
+        [SerializeField, Min(0)]
+        private int strongAttackBulletThreshold = 5;
+
+        [Tooltip("弾幕からの強攻撃インターバル")]
+        [SerializeField, Min(0.0f)]
+        private float strongAttackMaximumWait = 4.0f;
+
+        [Header("強攻撃：AOEオブジェクト")]
+        [Tooltip("赤い強攻撃範囲として使用するGameObject")]
+        [SerializeField]
+        private GameObject strongAttackObject;
+
+        [Header("強攻撃：予兆時間")]
+        [Tooltip("AOEが透明から完全表示になるまでの時間")]
+        [SerializeField, Min(0.1f)]
+        private float strongAttackChargeTime = 2.0f;
+
+        [Header("強攻撃：当たり判定")]
+        [Tooltip("赤い強攻撃範囲の半径")]
+        [SerializeField, Min(0.01f)]
+        private float strongAttackRadius = 3.0f;
+
+        [Header("強攻撃：攻撃後の疲労時間")]
+        [Tooltip("強攻撃終了後のインターバル")]
+        [SerializeField, Min(0.0f)]
+        private float strongAttackFatigueTime = 3.0f;
+
+        // ============================================================
+        // 敵ルーティン内部状態
+        // ============================================================
+        private enum EnemyAttackState
+        {
+            PatternFiring,
+            PatternInterval,
+            WaitingForBulletClear,
+            StrongCharging,
+            Fatigue
+        }
+
+        private EnemyAttackState enemyAttackState = EnemyAttackState.PatternInterval;
+
+        // ============================================================
+        // 現在実行中の「行動」の情報
+        // ============================================================
+        // 現在選ばれている行動のPattern配列。
+        // 例：行動1なら { 1, 2, 4 }
+        private int[] currentActionPatterns;
+
+        // 配列の何番目まで実行したか。
+        // 例：
+        // 0 → Pattern1
+        // 1 → Pattern2
+        // 2 → Pattern4
+        private int currentActionIndex = 0;
+
+        // 今発射したPatternの番号。
+        // 終了後のインターバル取得に使用する。
+        private int lastMainPattern = 0;
+
+        // 行動間待機タイマー
+        private float patternIntervalTimer;
+
+        // 弾幕が薄くなるのを待っている時間
+        private float bulletClearWaitTimer;
+
+        // 強攻撃予兆時間
+        private float strongAttackTimer;
+
+        // 強攻撃後の疲労時間
+        private float fatigueTimer;
+
+        // StrongAttackのRenderer
+        private Renderer strongAttackRenderer;
+
+        // α変更用
+        private MaterialPropertyBlock strongAttackProperties;
 
         // ============================================================
         // Playerダメージ設定
@@ -107,6 +311,10 @@ namespace KazumaPrototype
             endTimer; // 繝ｩ繧ｦ繝ｳ繝臥ｵゆｺ・ｾ後・邨碁℃遘呈焚縲・
         // 逋ｺ蟆・ｸ医∩蠑ｾ蟷輔・騾壹＠逡ｪ蜿ｷ縲ょｼｷ縺・竊・竊・縺ｮ蛻・ｊ譖ｿ縺医↓菴ｿ縺・・
         private int wave;
+
+        // 同時に存在できる敵弾の最大数。
+        private const int MaximumBulletCount = 200; // 弾幕によるGameObjectの無制限生成を防止する。
+
         // 蜑阪ヵ繝ｬ繝ｼ繝縺ｮ繝励Ξ繧､繝､繝ｼ菴咲ｽｮ縲り｡晉ｪ∬ｨ育ｮ礼畑縺ｮ遘ｻ蜍募玄髢薙・蟋狗せ縲・
         private Vector3 previousPlayerPosition;
         // 荳譎ら噪縺ｪ蜀・ｽ｢繧ｨ繝輔ぉ繧ｯ繝医・邱壹∫ｵ碁℃譎る俣縲∬牡縲∵怙邨ょ濠蠕・ｒ縺ｾ縺ｨ繧√◆繝・・繧ｿ縲・
@@ -129,8 +337,128 @@ namespace KazumaPrototype
             {
                 SoundManager.Instance.PlayBGM("Stage1BGM");
             }
-                if (Application.platform == RuntimePlatform.Android) Screen.orientation = ScreenOrientation.Portrait;
+            if (Application.platform == RuntimePlatform.Android) Screen.orientation = ScreenOrientation.Portrait;
+
+            // ============================================================
+            // StrongAttack初期設定
+            // ============================================================
+            if (strongAttackObject != null)
+            {
+                strongAttackRenderer =
+                    strongAttackObject.GetComponentInChildren<Renderer>();
+
+                strongAttackProperties =
+                    new MaterialPropertyBlock();
+
+                SetStrongAttackAlpha(0.0f);
+
+                strongAttackObject.SetActive(false);
+            }
+
             ResetRound();
+        }
+
+        // ============================================================
+        // 次に実行する行動をランダム抽選
+        // ============================================================
+        private void SelectRandomAction()
+        {
+            // Bossの現在HP割合。
+            float hpRate =
+                BossHealth /
+                Mathf.Max(bossMaxHealth, 0.01f);
+
+            // Inspectorで設定された通常ウェイトを取得。
+            float weight1 = action1Weight;
+            float weight2 = action2Weight;
+            float weight3 = action3Weight;
+            float weight4 = action4Weight;
+
+            // --------------------------------------------------------
+            // HPが指定割合以下なら行動3・4を選ばれやすくする
+            // --------------------------------------------------------
+            if (hpRate <= lowHpThreshold)
+            {
+                weight3 *= action3LowHpMultiplier;
+                weight4 *= action4LowHpMultiplier;
+            }
+
+            // 全ウェイト合計。
+            float totalWeight =
+                weight1 +
+                weight2 +
+                weight3 +
+                weight4;
+
+            // 全部0だと抽選できないため行動1を使用。
+            if (totalWeight <= 0.0f)
+            {
+                currentActionPatterns =
+                    new int[] { 1, 2, 4 };
+
+                currentActionIndex = 0;
+                return;
+            }
+
+            // 0～合計値のどこかをランダム選択。
+            float randomValue =
+                Random.Range(0.0f, totalWeight);
+
+            // --------------------------------------------------------
+            // 行動1
+            // Pattern1 → Pattern2 → Pattern4
+            // --------------------------------------------------------
+            if (randomValue < weight1)
+            {
+                currentActionPatterns =
+                    new int[] { 1, 2, 4 };
+
+                Debug.Log(
+                    "Enemy Action Selected : Action1 [1 → 2 → 4]");
+            }
+
+            // --------------------------------------------------------
+            // 行動2
+            // Pattern2 → Pattern4
+            // --------------------------------------------------------
+            else if (randomValue < weight1 + weight2)
+            {
+                currentActionPatterns =
+                    new int[] { 2, 4 };
+
+                Debug.Log(
+                    "Enemy Action Selected : Action2 [2 → 4]");
+            }
+
+            // --------------------------------------------------------
+            // 行動3
+            // Pattern3のみ
+            // --------------------------------------------------------
+            else if (randomValue <
+                     weight1 + weight2 + weight3)
+            {
+                currentActionPatterns =
+                    new int[] { 3 };
+
+                Debug.Log(
+                    "Enemy Action Selected : Action3 [3]");
+            }
+
+            // --------------------------------------------------------
+            // 行動4
+            // Pattern2 → Pattern3
+            // --------------------------------------------------------
+            else
+            {
+                currentActionPatterns =
+                    new int[] { 2, 3 };
+
+                Debug.Log(
+                    "Enemy Action Selected : Action4 [2 → 3]");
+            }
+
+            // 新しい行動なので先頭から開始。
+            currentActionIndex = 0;
         }
 
         // 谿九▲縺溷ｼｾ繝ｻ貍泌・繧堤援莉倥￠縲？P縲√ち繧､繝槭・縲√・繝ｬ繧､繝､繝ｼ縺ｨ鬚ｨ闊ｹ繧帝幕蟋狗憾諷九↓謌ｻ縺吶・
@@ -143,6 +471,12 @@ namespace KazumaPrototype
             damageInvincibleTimer = 0.0f;
             blinkTimer = 0.0f;
             isGameOver = false;
+
+            // 敵行動を初期状態へ戻す。
+            // 最初の攻撃時に行動1～4からランダム抽選される。
+            currentActionPatterns = null;
+            currentActionIndex = 0;
+            lastMainPattern = 0;
 
             // Playerを操作可能状態に戻す
             player.SetCanMove(true);
@@ -170,6 +504,28 @@ namespace KazumaPrototype
             ParryCount = wave = 0;
             shotTimer = 2.5f;
             invincible = parryRemaining = endTimer = 0f;
+
+            // ============================================================
+            // 敵攻撃ルーティン初期化
+            // ============================================================
+            enemyAttackState = EnemyAttackState.PatternInterval;
+
+            // 最初だけ少し待ってから攻撃開始
+            patternIntervalTimer = 2.5f;
+
+            bulletClearWaitTimer = 0.0f;
+
+            strongAttackTimer = 0.0f;
+
+            fatigueTimer = 0.0f;
+
+            if (strongAttackObject != null)
+            {
+                strongAttackObject.SetActive(false);
+
+                SetStrongAttackAlpha(0.0f);
+            }
+
             boss.gameObject.SetActive(true);
             weakPoint.gameObject.SetActive(true);
             player.ResetPlayer(new Vector3(0f, 0.65f, -4.5f));
@@ -238,12 +594,46 @@ namespace KazumaPrototype
                 );
             }
 
-            shotTimer -= dt;
-            if (shotTimer <= 0f)
+            if (damageInvincibleTimer <= 0.0f && !isGameOver)
             {
-                FireWave();
-                shotTimer = shotInterval;
+                player.SetColor(
+                    invincible > 0.0f
+                        ? Color.white
+                        : new Color(0.12f, 0.8f, 1.0f)
+                );
             }
+
+            // ============================================================
+            // 敵攻撃ルーティン
+            // ============================================================
+            UpdateEnemyAttackRoutine(dt);
+        }
+
+        public KazumaBullet SpawnBullet(
+               Vector3 position,
+               Vector3 velocity,
+               int power)
+        {
+            // 弾幕が大量に発生しても、
+            // 無制限にGameObjectを生成しない。
+            if (bullets.Count >= MaximumBulletCount)
+            {
+                return null;
+            }
+
+            KazumaBullet Bullet =
+                Instantiate(
+                    bulletPrefab,
+                    transform);
+
+            Bullet.Initialize(
+                position,
+                velocity,
+                power);
+
+            bullets.Add(Bullet);
+
+            return Bullet;
         }
 
         // ============================================================
@@ -348,6 +738,126 @@ namespace KazumaPrototype
             }
         }
 
+        // ============================================================
+        // Pattern発射
+        // ============================================================
+        // メインPatternを必ず発射する。
+        // さらにInspectorで設定した確率に成功した場合、
+        // 別のPatternを1種類追加して同時発射する。
+        // ============================================================
+        private void FireEnemyPattern(
+            int mainPattern)
+        {
+            // メインPattern発射。
+            bulletPattern.FirePattern(
+                mainPattern);
+
+            lastMainPattern =
+                mainPattern;
+
+            // --------------------------------------------------------
+            // 同時発動するか抽選
+            // --------------------------------------------------------
+            float simultaneousRoll =
+                Random.Range(0.0f, 100.0f);
+
+            // 抽選失敗ならメインPatternだけ。
+            if (simultaneousRoll >
+                simultaneousPatternChance)
+            {
+                return;
+            }
+
+            // 追加Patternを抽選。
+            int extraPattern =
+                SelectSimultaneousPattern(
+                    mainPattern);
+
+            // 有効なPatternがなければ終了。
+            if (extraPattern <= 0)
+            {
+                return;
+            }
+
+            // --------------------------------------------------------
+            // 追加Patternを同時発射
+            // --------------------------------------------------------
+            bulletPattern.FirePattern(
+                extraPattern);
+
+            Debug.Log(
+                $"Simultaneous Pattern : " +
+                $"{mainPattern} + {extraPattern}");
+        }
+
+        // ============================================================
+        // 同時発動する追加Patternを抽選
+        // ============================================================
+        // mainPatternと同じPatternは候補から除外する。
+        // 各Patternの出現しやすさはInspectorから調整可能。
+        // ============================================================
+        private int SelectSimultaneousPattern(
+            int mainPattern)
+        {
+            float[] weights =
+            {
+                simultaneousPattern1Weight,
+                simultaneousPattern2Weight,
+                simultaneousPattern3Weight,
+                simultaneousPattern4Weight,
+                simultaneousPattern5Weight,
+                simultaneousPattern6Weight
+            };
+
+            // メインと同じPatternは同時発動させない。
+            weights[mainPattern - 1] = 0.0f;
+
+            float totalWeight = 0.0f;
+
+            for (int i = 0;
+                 i < weights.Length;
+                 i++)
+            {
+                totalWeight +=
+                    Mathf.Max(
+                        0.0f,
+                        weights[i]);
+            }
+
+            // 候補が全部0なら追加Patternなし。
+            if (totalWeight <= 0.0f)
+            {
+                return 0;
+            }
+
+            float randomValue =
+                Random.Range(
+                    0.0f,
+                    totalWeight);
+
+            float accumulatedWeight =
+                0.0f;
+
+            for (int i = 0;
+                 i < weights.Length;
+                 i++)
+            {
+                accumulatedWeight +=
+                    Mathf.Max(
+                        0.0f,
+                        weights[i]);
+
+                if (randomValue <
+                    accumulatedWeight)
+                {
+                    // 配列0～5をPattern1～6へ変換。
+                    return i + 1;
+                }
+            }
+
+            return 0;
+        }
+
         // 謚墓憧謌仙粥譎ゅ↓辟｡謨ｵ縺ｨ繝代Μ繧｣縺ｮ蜿嶺ｻ倥ｒ蜷梧凾縺ｫ髢句ｧ九＠縲∫區縺・・縺ｧ蜷亥峙縺吶ｋ縲・
         public void BeginReleaseProtection()
         {
@@ -356,35 +866,468 @@ namespace KazumaPrototype
             EmitPulse(player.transform.position, Color.white, 0.8f);
         }
 
-        // 蠑ｷ縺・竊・竊・繧堤ｹｰ繧願ｿ斐☆謇・憾蠑ｾ蟷輔ら匱蟆・凾轤ｹ縺ｮ繝励Ξ繧､繝､繝ｼ譁ｹ蜷代ｒ迢吶≧縲・
-        private void FireWave()
+        // ============================================================
+        // 敵攻撃ルーティン更新
+        // ============================================================
+        // Bossの攻撃を以下の順番で進行させる。
+        //
+        // Pattern1
+        //   ↓
+        // 待機
+        //   ↓
+        // Pattern2
+        //   ↓
+        // 待機
+        //   ↓
+        // Pattern3
+        //   ↓
+        // 待機
+        //   ↓
+        // Pattern4
+        //   ↓
+        // 待機
+        //   ↓
+        // Pattern5
+        //   ↓
+        // 待機
+        //   ↓
+        // Pattern6
+        //   ↓
+        // 待機
+        //   ↓
+        // 画面上の敵弾が少なくなるまで待機
+        //   ↓
+        // 強攻撃予兆
+        //   ↓
+        // 強攻撃判定
+        //   ↓
+        // 疲労時間
+        //   ↓
+        // Pattern1へ戻る
+        //
+        // 実際の弾生成はBulletPatternが担当し、
+        // PrototypeArena「攻撃全体の進行」
+        // ============================================================
+        private void UpdateEnemyAttackRoutine(float dt)
         {
-            // 莉雁屓縺ｮ蠑ｾ蟷輔・蠑ｷ縺輔ら匱蟆・・縺溘・縺ｫ1竊・竊・繧堤ｹｰ繧願ｿ斐☆縲・
-            int power = 1 + wave++ % 3;
-            // 繝懊せ縺ｮ蠑ｱ轤ｹ繧医ｊ蟆代＠謇句燕縺ｫ鄂ｮ縺乗雰蠑ｾ縺ｮ逋ｺ蟆・ｽ咲ｽｮ縲・
-            Vector3 origin = weakPoint.position + Vector3.back * 0.5f;
-            // 逋ｺ蟆・ｽ咲ｽｮ縺九ｉ迴ｾ蝨ｨ縺ｮ繝励Ξ繧､繝､繝ｼ縺ｸ蜷代°縺・聞縺・縺ｮ譁ｹ蜷代・
-            Vector3 direction = (player.transform.position - origin).normalized;
-            // 荳蠎ｦ縺ｫ逋ｺ蟆・☆繧句ｼｾ縺ｮ謨ｰ縲ょｼｷ縺・縺ｪ繧・逋ｺ縲√◎繧御ｻ･螟悶・5逋ｺ縲・
-            int count = power == 3 ? 3 : 5;
-            // i・壹％縺ｮ郢ｰ繧願ｿ斐＠縺ｧ蜃ｦ逅・☆繧句ｯｾ雎｡縺ｮ逡ｪ蜿ｷ縲よ擅莉ｶ繧呈ｺ縺溘☆髢薙・・分縺ｫ譖ｴ譁ｰ縺吶ｋ縲・
-            for (int i = 0; i < count; i++)
+            // BulletPatternがInspectorで設定されていなければ
+            // 弾幕を発射できないので処理を終了する。
+            if (bulletPattern == null)
             {
-                // 謇・憾縺ｫ14蠎ｦ縺壹▽譁ｹ蜷代ｒ縺壹ｉ縺励∝ｼｷ縺輔↓蠢懊§縺滄溘＆繧剃ｸ弱∴縺溷ｼｾ縺ｮ騾溷ｺｦ縲・
-                Vector3 velocity = Quaternion.AngleAxis((i - (count - 1) * 0.5f) * 14f, Vector3.up) * direction * (2.7f + power * 0.35f);
-                SpawnBullet(origin, velocity, power);
+                return;
+            }
+
+            // 現在のBoss攻撃状態によって処理を切り替える。
+            switch (enemyAttackState)
+            {
+                // ========================================================
+                // ① Pattern発射中
+                // ========================================================
+                case EnemyAttackState.PatternFiring:
+                    {
+                        // 同時発動したPatternを含め、
+                        // 全Coroutineが終了するまで待つ。
+                        if (bulletPattern.IsFiring)
+                        {
+                            return;
+                        }
+
+                        // 今発射したメインPatternに対応した
+                        // Inspector設定のインターバルを取得。
+                        patternIntervalTimer =
+                            GetPatternInterval(
+                                lastMainPattern);
+
+                        // 現在の行動内で次のPatternへ進む。
+                        currentActionIndex++;
+
+                        enemyAttackState =
+                            EnemyAttackState.PatternInterval;
+
+                        break;
+                    }
+
+                // ========================================================
+                // ② Pattern間インターバル
+                // ========================================================
+                case EnemyAttackState.PatternInterval:
+                    {
+                        patternIntervalTimer -= dt;
+
+                        // まだ待機中。
+                        if (patternIntervalTimer > 0.0f)
+                        {
+                            return;
+                        }
+
+                        // ----------------------------------------------------
+                        // 行動がまだ選ばれていない場合
+                        // ----------------------------------------------------
+                        if (currentActionPatterns == null)
+                        {
+                            SelectRandomAction();
+                        }
+
+                        // ----------------------------------------------------
+                        // 現在の行動に含まれるPatternを全部終了
+                        // ----------------------------------------------------
+                        if (currentActionIndex >=
+                            currentActionPatterns.Length)
+                        {
+                            // 今回の行動終了。
+                            currentActionPatterns = null;
+
+                            // 強攻撃前の弾減少待機へ。
+                            bulletClearWaitTimer = 0.0f;
+
+                            enemyAttackState =
+                                EnemyAttackState.WaitingForBulletClear;
+
+                            return;
+                        }
+
+                        // ----------------------------------------------------
+                        // 行動内の次のPatternを取得
+                        // ----------------------------------------------------
+                        int nextPattern =
+                            currentActionPatterns[
+                                currentActionIndex];
+
+                        // Pattern発射。
+                        // この中で同時発動抽選も行う。
+                        FireEnemyPattern(
+                            nextPattern);
+
+                        enemyAttackState =
+                            EnemyAttackState.PatternFiring;
+
+                        break;
+                    }
+
+                // ========================================================
+                // ③ Pattern6終了後
+                //    画面上の敵弾が少なくなるまで待機
+                // ========================================================
+                case EnemyAttackState.WaitingForBulletClear:
+                    {
+                        // この状態になってからの経過時間を加算。
+                        bulletClearWaitTimer += dt;
+
+                        // ----------------------------------------------------
+                        // 条件A：
+                        // 残っている敵弾が指定数以下になった
+                        // ----------------------------------------------------
+                        bool enoughBulletsCleared =
+                            bullets.Count <=
+                            strongAttackBulletThreshold;
+
+                        // ----------------------------------------------------
+                        // 条件B：
+                        // 最大待機時間を超えた
+                        // ----------------------------------------------------
+                        //
+                        // 弾が何らかの理由で減らない場合でも、
+                        // Bossが永久に止まらないための保険。
+                        bool waitedTooLong =
+                            bulletClearWaitTimer >=
+                            strongAttackMaximumWait;
+
+                        // A・Bどちらも満たしていない場合は
+                        // まだ強攻撃を開始しない。
+                        if (!enoughBulletsCleared &&
+                            !waitedTooLong)
+                        {
+                            return;
+                        }
+
+                        // 弾が十分減った、または最大待機時間を超えたので
+                        // 強攻撃予兆を開始。
+                        BeginStrongAttack();
+
+                        break;
+                    }
+
+
+                // ========================================================
+                // ④ 強攻撃の予兆中
+                // ========================================================
+                case EnemyAttackState.StrongCharging:
+                    {
+                        // 強攻撃予兆の経過時間。
+                        strongAttackTimer += dt;
+
+                        // ----------------------------------------------------
+                        // 予兆の進行度を0～1へ変換
+                        // ----------------------------------------------------
+                        //
+                        // 例：
+                        // strongAttackChargeTime = 2秒
+                        //
+                        // 0秒 → 0.0
+                        // 1秒 → 0.5
+                        // 2秒 → 1.0
+                        //
+                        float progress =
+                            Mathf.Clamp01(
+                                strongAttackTimer /
+                                Mathf.Max(
+                                    strongAttackChargeTime,
+                                    0.01f));
+
+                        // 赤い強攻撃範囲を
+                        // 透明 → 完全表示へ徐々に変化させる。
+                        SetStrongAttackAlpha(
+                            progress);
+
+                        // まだ100%になっていなければ
+                        // 強攻撃は発動しない。
+                        if (progress < 1.0f)
+                        {
+                            return;
+                        }
+
+                        // 100%になった瞬間に強攻撃判定。
+                        ExecuteStrongAttack();
+
+                        break;
+                    }
+
+
+                // ========================================================
+                // ⑤ 強攻撃終了後の疲労状態
+                // ========================================================
+                case EnemyAttackState.Fatigue:
+                    {
+                        // 毎フレーム疲労時間を減らす。
+                        fatigueTimer -= dt;
+
+                        // 疲労時間が残っている間はBossは何もしない。
+                        if (fatigueTimer > 0.0f)
+                        {
+                            return;
+                        }
+
+                        // ========================================================
+                        // 攻撃ルーティン1周終了
+                        // 強攻撃後、次の行動を新しくランダム抽選する
+                        // ========================================================
+                        // 前回の行動を破棄。
+                        currentActionPatterns = null;
+
+                        // 配列位置を初期化。
+                        currentActionIndex = 0;
+
+                        // 前回Pattern情報もリセット。
+                        lastMainPattern = 0;
+
+                        // 次フレームから新しい行動を抽選。
+                        patternIntervalTimer = 0.0f;
+
+                        enemyAttackState =
+                            EnemyAttackState.PatternInterval;
+
+                        break;
+                        
+                    }
             }
         }
 
-        // 蠑ｾ繧堤函謌舌＠縺ｦ邂｡逅・Μ繧ｹ繝医∈逋ｻ骭ｲ縺吶ｋ縲りｲ闕ｷ蟇ｾ遲悶→縺励※96蛟九ｒ荳企剞縺ｨ縺励∬ｶ・∴縺溘ｉnull繧定ｿ斐☆縲・
-        public KazumaBullet SpawnBullet(Vector3 position, Vector3 velocity, int power)
+        // ============================================================
+        // Pattern終了後のインターバル取得
+        // ============================================================
+        // Patternの進行そのものはAction側で管理するため、
+        // この関数では「待機時間を返すだけ」にする。
+        // ============================================================
+        private float GetPatternInterval(
+            int patternNumber)
         {
-            if (bullets.Count >= 96) return null;
-            // 逕滓・縺ｾ縺溘・蛻､螳壼ｯｾ雎｡縺ｨ縺ｪ繧区雰蠑ｾ縲・
-            var bullet = Instantiate(bulletPrefab, transform);
-            bullet.Initialize(position, velocity, power);
-            bullets.Add(bullet);
-            return bullet;
+            switch (patternNumber)
+            {
+                case 1:
+                    return pattern1Interval;
+
+                case 2:
+                    return pattern2Interval;
+
+                case 3:
+                    return pattern3Interval;
+
+                case 4:
+                    return pattern4Interval;
+
+                case 5:
+                    return pattern5Interval;
+
+                case 6:
+                    return pattern6Interval;
+
+                default:
+                    return 0.0f;
+            }
+        }
+
+        // ============================================================
+        // 強攻撃開始
+        // ============================================================
+        private void BeginStrongAttack()
+        {
+            enemyAttackState =
+                EnemyAttackState.StrongCharging;
+
+            strongAttackTimer = 0.0f;
+
+            // 注意：
+            // ここではClearBulletsしない。
+            // 残っている弾はそのまま画面外へ流す。
+
+            if (strongAttackObject != null)
+            {
+                strongAttackObject.SetActive(true);
+
+                SetStrongAttackAlpha(0.0f);
+            }
+
+            Debug.Log( "Strong Attack Start! Remaining Bullets : " + bullets.Count);
+        }
+
+        // ============================================================
+        // 強攻撃発動
+        // ============================================================
+        private void ExecuteStrongAttack()
+        {
+            SetStrongAttackAlpha(1.0f);
+
+            bool playerInside =
+                IsPlayerInsideStrongAttack();
+
+            if (playerInside)
+            {
+                DamagePlayer();
+
+                Debug.Log(
+                    "Strong Attack HIT!");
+            }
+            else
+            {
+                Debug.Log(
+                    "Strong Attack MISS!");
+            }
+
+            if (strongAttackObject != null)
+            {
+                strongAttackObject.SetActive(false);
+            }
+
+            SetStrongAttackAlpha(0.0f);
+
+            enemyAttackState =
+                EnemyAttackState.Fatigue;
+
+            fatigueTimer =
+                strongAttackFatigueTime;
+        }
+
+        // ============================================================
+        // 強攻撃範囲内にPlayerがいるか判定
+        // ============================================================
+        // StrongAttackオブジェクトの中心位置とPlayer位置の距離を調べ、
+        // Inspectorで設定したstrongAttackRadius以内ならtrueを返す。
+        // このゲームは上から見下ろす形式なので、Y（高さ）は無視して
+        // XZ平面だけで距離を計算する。
+        // ============================================================
+        private bool IsPlayerInsideStrongAttack()
+        {
+            // StrongAttackまたはPlayerが未設定なら
+            // 正しい判定ができないため攻撃範囲外として扱う。
+            if (strongAttackObject == null ||
+                player == null)
+            {
+                return false;
+            }
+
+            // 強攻撃オブジェクトの中心位置を取得。
+            Vector3 attackPosition =
+                strongAttackObject.transform.position;
+
+            // 現在のPlayer位置を取得。
+            Vector3 playerPosition =
+                player.transform.position;
+
+            // --------------------------------------------------------
+            // XZ平面へ変換
+            // --------------------------------------------------------
+            // 上から見下ろすゲームなので、
+            // Y方向（高さ）の差は当たり判定に使用しない。
+            Vector2 attackXZ =
+                new Vector2(
+                    attackPosition.x,
+                    attackPosition.z);
+
+            Vector2 playerXZ =
+                new Vector2(
+                    playerPosition.x,
+                    playerPosition.z);
+
+            // 強攻撃中心からPlayerまでの距離を計算。
+            float distance =
+                Vector2.Distance(
+                    attackXZ,
+                    playerXZ);
+
+            // Inspectorで設定した半径以内なら命中。
+            // true  = 強攻撃範囲内
+            // false = 強攻撃範囲外
+            return distance <=
+                strongAttackRadius;
+        }
+        // ============================================================
+        // StrongAttack透明度変更
+        // ============================================================
+        private void SetStrongAttackAlpha(float alpha)
+        {
+            if (strongAttackRenderer == null)
+            {
+                return;
+            }
+
+            if (strongAttackProperties == null)
+            {
+                strongAttackProperties =
+                    new MaterialPropertyBlock();
+            }
+
+            strongAttackRenderer.GetPropertyBlock(
+                strongAttackProperties);
+
+            Color color = Color.red;
+
+            // 現在のマテリアル色を取得
+            if (strongAttackRenderer.sharedMaterial != null)
+            {
+                if (strongAttackRenderer.sharedMaterial.HasProperty("_BaseColor"))
+                {
+                    color =
+                        strongAttackRenderer.sharedMaterial.GetColor("_BaseColor");
+                }
+                else if (strongAttackRenderer.sharedMaterial.HasProperty("_Color"))
+                {
+                    color =
+                        strongAttackRenderer.sharedMaterial.GetColor("_Color");
+                }
+            }
+
+            color.a = Mathf.Clamp01(alpha);
+
+            strongAttackProperties.SetColor(
+                "_BaseColor",
+                color);
+
+            strongAttackProperties.SetColor(
+                "_Color",
+                color);
+
+            strongAttackRenderer.SetPropertyBlock(
+                strongAttackProperties);
         }
 
         // 蠑ｾ繧帝ｲ繧√※陦晉ｪ√ｒ隗｣豎ｺ縺吶ｋ縲ＱlayerFrom/To縺ｯ縺薙・譎る俣蛹ｺ髢薙・繝励Ξ繧､繝､繝ｼ遘ｻ蜍募燕・丞ｾ後・菴咲ｽｮ縲・
