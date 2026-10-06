@@ -3,38 +3,62 @@ using UnityEngine.InputSystem;
 
 namespace KazumaPrototype
 {
-    // 指・マウスの移動量だけプレイヤーを動かす。押した位置への瞬間移動はしない。
-    // Arena が ReadInput を呼び、移動速度や押す／離す瞬間を水風船の制御に渡す。
+    // 持E�Eマウスの移動量だけ�Eレイヤーを動かす。押した位置への瞬間移動�EしなぁE��E
+    // Arena ぁEReadInput を呼び、移動速度めE��す／離す瞬間を水風船の制御に渡す、E
     public sealed class KazumaDragPlayer : MonoBehaviour
     {
-        // ドラッグ移動量の倍率。1なら画面上の指の移動に対応した距離だけ動く。
+        // キャラクターの基本性能。実行時のパッシブ補正もこのインスタンスに保持する、E
+        [Header("�L�����N�^�[���\�F�p���B�E�L���[�E�U����")]
+        [Tooltip("6��ނ̊�{�{���𒲐����܂��B���ׂ�1���W�����\�ł��B")]
+        [SerializeField] private KazumaPlayerParameters parameters = new KazumaPlayerParameters();
+
+        // Arenaと水風船が参照する共通パラメーター。旧Prefabにも�E期値で対応する、E
+        public KazumaPlayerParameters Parameters => parameters ?? (parameters = new KazumaPlayerParameters());
+
+        // ドラチE��移動量の倍率、Eなら画面上�E持E�E移動に対応した距離だけ動く、E
+        [Header("����F�h���b�O�ւ̔����{��")]
+        [Tooltip("1���W���ł��B�傫���قǓ����h���b�O�ʂŉ����ֈړ����܂��B")]
         [SerializeField] private float dragSensitivity = 1f;
-        // 水風船へ渡す速度の上限（ワールド単位／秒）。プレイヤーの移動距離自体は制限しない。
+
+        // 水風船へ渡す速度の上限�E�ワールド単位／秒）。�Eレイヤーの移動距離自体�E制限しなぁE��E
+        [Header("��������F�����p�����x�̏��")]
+        [Tooltip("�����D�֓n���ړ����x�̏���ł��B�P�ʂ̓��[���h�P�ʖ��b�ł��B")]
         [SerializeField] private float maximumFlickSpeed = 18f;
+
+        // 色めE��を表示する本体�ERenderer、E
+        [Header("�v���C���[�̌����ځF�\���pRenderer")]
+        [Tooltip("�v���C���[Prefab���̕\���pRenderer��ݒ肵�܂��B")]
         [SerializeField] private Renderer body;
-        // プレイヤーの当たり判定半径。見た目の拡縮とは独立している。
+
+        // プレイヤーの当たり判定半征E��見た目の拡縮とは独立してぁE��、E
         public const float Radius = 0.34f;
-        // 現在押しているか、今回の移動速度、投げるときに使う直近の移動速度。
+        // 現在押してぁE��か、今回の移動速度、投げるときに使ぁE��近�E移動速度、E
         public bool IsHeld { get; private set; }
+        // 1秒当たり�E移動量を表す速度、E
         public Vector3 Velocity { get; private set; }
+        // 投げる瞬間に水風船へ加える、直近�Eプレイヤー移動速度、E
         public Vector3 FlickVelocity { get; private set; }
-        // 押し始め／離した瞬間だけ true。入力更新のたびにリセットする。
+        // 押し始め�E�離した瞬間だぁEtrue。�E力更新のた�EにリセチE��する、E
         public bool PressedThisFrame { get; private set; }
+        // 今回の入力更新で、押してぁE��持E�Eボタンを離した場合だけtrue、E
         public bool ReleasedThisFrame { get; private set; }
+        // 前回の持E�Eマウスの画面座標（ピクセル�E�、E
         private Vector2 previousPointer;
-        // 操作中の指を識別するID。-1はマウス、または操作していない状態。
+        // 操作中の持E��識別するID、E1はマウス、また�E操作してぁE��ぁE��態、E
         private int pointerId = -1;
-        // アプリ復帰時などに、押しっぱなしの入力を一度離すまで無視する。
+        // アプリ復帰時などに、押しっぱなし�E入力を一度離すまで無視する、E
         private bool ignoreUntilRelease;
+        // 最後に動いた時刻�E�ゲームの時間倍率に影響されなぁE��数�E�、E
         private float lastMovementTime;
+        // 共有�EチE��アルを変えず、対象だけ�E色を指定するため�EチE�Eタ、E
         private MaterialPropertyBlock properties;
 
-        // falseの場合、プレイヤーの操作を受け付けない
+        // falseの場合、�Eレイヤーの操作を受け付けなぁE
         // GameOverなどで使用
         public bool CanMove { get; private set; } = true; // Player�̑�����
 
-        // 端末の入力を読み取る入口。タッチを優先し、同じ処理 FeedPointer に渡す。
-        // bounds は移動可能なX/Z範囲（RectのYはワールドZとして扱う）、dt は秒。
+        // 端末の入力を読み取る入口。タチE��を優先し、同じ�E琁EFeedPointer に渡す、E
+        // bounds は移動可能なX/Z篁E���E�EectのYはワールドZとして扱ぁE��、dt は秒、E
         public void ReadInput(Camera camera, Rect bounds, float dt)
         {
             // ����֎~��ԂȂ���͂��󂯕t���Ȃ�
@@ -48,13 +72,18 @@ namespace KazumaPrototype
                 return;
             }
 
+            // 今回、操作用の持E��た�Eマウスボタンが押されてぁE��か、E
             bool held = false;
+            // 今回の持E�Eマウスの画面座標（ピクセル�E�、E
             Vector2 position = default;
+            // 入力�Eを識別するID。タチE��は持E�EID、�Eウスは-1、E
             int id = -1;
+            // 現在利用できるタチE��入力デバイス。存在しなぁE��合�Enull、E
             var touchscreen = Touchscreen.current;
-            // 最初に触れた指を追跡し続ける。途中で別の指を追加しても位置が飛ばないようにする。
+            // 最初に触れた持E��追跡し続ける。途中で別の持E��追加しても位置が飛�EなぁE��ぁE��する、E
             if (touchscreen != null)
             {
+                // touch�E�一覧から取り出した、今回処琁E��る対象、E
                 foreach (var touch in touchscreen.touches)
                 {
                     if (!touch.press.isPressed || (IsHeld && pointerId >= 0 && touch.touchId.ReadValue() != pointerId))
@@ -80,7 +109,7 @@ namespace KazumaPrototype
         {
             CanMove = canMove;
 
-            // 操作禁止になった時点で、入力処理と移動速度をリセット
+            // 操作禁止になった時点で、�E力�E琁E��移動速度をリセチE��
             if (!CanMove)
             {
                 IsHeld = false;
@@ -91,8 +120,8 @@ namespace KazumaPrototype
                 pointerId = -1;
             }
         }
-        // 押下状態と画面座標（ピクセル）から移動を計算する共通処理。
-        // 実機入力と自動検証の両方から呼べるよう、入力デバイスの読み取りを分離している。
+        // 押下状態と画面座標（ピクセル�E�から移動を計算する�E通�E琁E��E
+        // 実機�E力と自動検証の両方から呼べるよぁE���E力デバイスの読み取りを�E離してぁE��、E
         public void FeedPointer(bool held, Vector2 position, int id, Camera camera, Rect bounds, float dt)
         {
             PressedThisFrame = ReleasedThisFrame = false;
@@ -107,11 +136,11 @@ namespace KazumaPrototype
                 ReleasedThisFrame = IsHeld;
                 IsHeld = false;
                 pointerId = -1;
-                // 止めてから離した場合は、古い移動速度で投げないようにする（猶予0.1秒）。
+                // 止めてから離した場合�E、古ぁE��動速度で投げなぁE��ぁE��する�E�猶亁E.1秒）、E
                 if (Time.unscaledTime - lastMovementTime > 0.1f) FlickVelocity = Vector3.zero;
                 return;
             }
-            // 押した最初のフレームは基準座標の記録だけを行い、プレイヤーを動かさない。
+            // 押した最初�Eフレームは基準座標�E記録だけを行い、�Eレイヤーを動かさなぁE��E
             if (!IsHeld)
             {
                 IsHeld = true;
@@ -121,14 +150,19 @@ namespace KazumaPrototype
                 FlickVelocity = Vector3.zero;
                 return;
             }
-            // 前回／今回の画面座標から、プレイヤーと同じ高さの水平面へレイを飛ばす。
-            // 交点の差分を使うため、カメラの拡大率や画面サイズを移動量に反映できる。
+            // 前回�E�今回の画面座標から、�Eレイヤーと同じ高さの水平面へレイを飛�Eす、E
+            // 交点の差刁E��使ぁE��め、カメラの拡大玁E��画面サイズを移動量に反映できる、E
             var plane = new Plane(Vector3.up, transform.position);
+            // 前回の画面座標から水平面へ飛�Eすレイ、E
             Ray before = camera.ScreenPointToRay(previousPointer);
+            // 今回の画面座標から水平面へ飛�Eすレイ、E
             Ray after = camera.ScreenPointToRay(position);
             previousPointer = position;
+            // a/bは前回�E�今回のレイが水平面に届くまでの距離。交点を求めるために使ぁE��E
             if (!plane.Raycast(before, out float a) || !plane.Raycast(after, out float b)) return;
+            // 移動�E琁E��始める前のプレイヤー位置、E
             Vector3 oldPosition = transform.position;
+            // ドラチE��量を加えた移動�E。後で移動可能篁E��に収める、E
             Vector3 target = oldPosition + (after.GetPoint(b) - before.GetPoint(a)) * dragSensitivity;
             target.x = Mathf.Clamp(target.x, bounds.xMin, bounds.xMax);
             target.z = Mathf.Clamp(target.z, bounds.yMin, bounds.yMax);
@@ -142,7 +176,7 @@ namespace KazumaPrototype
             else if (Time.unscaledTime - lastMovementTime > 0.1f) FlickVelocity = Vector3.zero;
         }
 
-        // 位置と入力履歴を初期化する。waitForRelease=trueなら、次の押し直しまで操作を受け付けない。
+        // 位置と入力履歴を�E期化する。waitForRelease=trueなら、次の押し直しまで操作を受け付けなぁE��E
         public void ResetPlayer(Vector3 position, bool waitForRelease = false)
         {
             transform.position = position;
@@ -153,7 +187,7 @@ namespace KazumaPrototype
             SetColor(new Color(0.12f, 0.8f, 1f));
         }
 
-        // 共有マテリアルを複製せず、このプレイヤーだけの表示色を変える。
+        // 共有�EチE��アルを褁E��せず、このプレイヤーだけ�E表示色を変える、E
         public void SetColor(Color color)
         {
             if (body == null) return;
@@ -163,12 +197,12 @@ namespace KazumaPrototype
             body.SetPropertyBlock(properties);
         }
 
-        // 別アプリへの切り替え時に入力を解除し、復帰後の誤移動・誤投擲を防ぐ。
+        // 別アプリへの刁E��替え時に入力を解除し、復帰後�E誤移動�E誤投擲を防ぐ、E
         private void OnApplicationFocus(bool focused)
         {
             if (!focused) ResetPlayer(transform.position, true);
         }
-        // スマートフォンの一時停止でも同様に入力履歴を破棄する。
+        // スマ�Eトフォンの一時停止でも同様に入力履歴を破棁E��る、E
         private void OnApplicationPause(bool paused)
         {
             if (paused) ResetPlayer(transform.position, true);

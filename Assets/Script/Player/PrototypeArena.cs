@@ -4,28 +4,60 @@ using UnityEngine.InputSystem;
 
 namespace KazumaPrototype
 {
-    // ゲーム進行の司令塔。入力→水風船の移動→弾の衝突→ボス判定の順に更新する。
-    // 弾幕、投擲直後の無敵／パリィ、勝敗、リトライ、円形エフェクトもここで管理する。
+    // ゲーム進行�E司令塔。�E力�E水風船の移動�E弾の衝突�Eボス判定�E頁E��更新する、E
+    // 弾幕、投擲直後�E無敵�E�パリィ、勝敗、リトライ、�E形エフェクトもここで管琁E��る、E
     public sealed class KazumaPrototypeArena : MonoBehaviour
     {
-        // プレイ中・クリア・失敗の3状態。終了後は一定時間を置いて押し直すと再開できる。
+        // プレイ中・クリア・失敗�E3状態。終亁E���E一定時間を置ぁE��押し直すと再開できる、E
         public enum RoundState { Playing, Cleared, Failed }
-        // シーン／Prefabの参照。KazumaPrototypeBuilderが生成時に設定する。
-        [SerializeField] private Camera gameCamera;
+        // ��ʕ\���ƁA�^�b�`�ʒu����̈ړ��v�Z�Ɏg�p����J�����B
+        [Header("��ʁF�Q�[���p�J����")]
+        [Tooltip("�v���C��ʂ�Camera��ݒ肵�܂��B")][SerializeField] private Camera gameCamera;
+
+        // �v���C���[�̓��͂ƈړ����Ǘ�����R���|�[�l���g�B
+        [Header("����ΏہF�v���C���[")]
+        [Tooltip("�V�[�����̃v���C���[�ɕt���Ă���KazumaDragPlayer��ݒ肵�܂��B")]
         [SerializeField] private KazumaDragPlayer player;
+
+        // �����D�̈ړ��Ɠ������Ǘ�����R���|�[�l���g�B
+        [Header("�U���ΏہF�����D")]
+        [Tooltip("�V�[�����̐����D�ɕt���Ă���KazumaWaterBalloon��ݒ肵�܂��B")]
         [SerializeField] private KazumaWaterBalloon balloon;
+
+        // ���ˎ��ɕ�������G�e��Prefab�B
+        [Header("�G�̍U���F�ePrefab")]
+        [Tooltip("�G�ePrefab�ɕt���Ă���KazumaBullet��ݒ肵�܂��B")]
         [SerializeField] private KazumaBullet bulletPrefab;
+
+        // �{�X�{�̂Ƃ̐ڐG����ƁA�N���A���̔�\���Ɏg�p����B
+        [Header("�G�̔z�u�F�{�X�{��")]
+        [Tooltip("�V�[�����̃{�X�{�̂�Transform��ݒ肵�܂��B")]
         [SerializeField] private Transform boss;
+
+        // �����������D��������ƁA�{�X�փ_���[�W��^����ʒu�B
+        [Header("�G�̎�_�F�_���[�W����ʒu")]
+        [Tooltip("�V�[�����̎�_��Transform��ݒ肵�܂��B")]
         [SerializeField] private Transform weakPoint;
+
+        // ������p���B�Ȃǂ̉~�`�G�t�F�N�g�Ɏg�p����B
+        [Header("���o�F�~�`�G�t�F�N�g�̑f��")]
+        [Tooltip("�G�t�F�N�g��LineRenderer�Ɏg�p����}�e���A����ݒ肵�܂��B")]
         [SerializeField] private Material effectMaterial;
-        [Header("Prototype tuning")]
-        // ボスの初期HP。弱点に投げた水風船が当たると減る。
+
+        [Header("��Փx�F�{�X�̍ő�HP")]
+        [Tooltip("���E���h�J�n���̃{�X��HP�ł��B")]
         [SerializeField] private float bossMaxHealth = 150f;
-        // 弾幕を発射する間隔（秒）。ラウンド開始直後だけ2.5秒待つ。
+
+        [Header("��Փx�F�e�̔��ˊԊu")]
+        [Tooltip("�e�𔭎˂���Ԋu�ł��B�P�ʂ͕b�ł��B�ŏ��̔��˂͊J�n����2.5�b��ł��B")]
         [SerializeField] private float shotInterval = 1.5f;
-        // 水風船を投げた直後に被弾しても失敗しない時間（秒）。
+
+        [Header("�~�ρF����������̖��G����")]
+        [Tooltip("�����D�𓊂�������̖��G���Ԃł��B�P�ʂ͕b�ł��B")]
         [SerializeField] private float releaseInvulnerability = 0.22f;
-        // 投擲直後に強さ3の弾へ触れると全弾消去できる受付時間（秒）。
+
+        [Header("�p���B�F������̎�t����")]
+        [Tooltip("������Ƀp���B�����������t���Ԃł��B�P�ʂ͕b�ł��B")]
         [SerializeField] private float parryWindow = 0.12f;
 
         // ============================================================
@@ -54,22 +86,43 @@ namespace KazumaPrototype
         // GameOver��Ԃ�
         private bool isGameOver;
 
+        // 現在の進行状態、E
         public RoundState State { get; private set; }
+        // ボスの残りHP、Eになるとクリア、E
         public float BossHealth { get; private set; }
+        // こ�Eラウンドで成功したパリィの回数、E
         public int ParryCount { get; private set; }
+        // 現在管琁E��てぁE��敵弾の数、E
         public int ActiveBulletCount => bullets.Count;
-        // プレイヤー中心の移動範囲。Rectの横軸はワールドX、縦軸はワールドZに対応する。
+        // プレイヤー中忁E�E移動篁E��。Rectの横軸はワールドX、縦軸はワールドZに対応する、E
         public static Rect MovementBounds => Rect.MinMaxRect(-4.1f, -7.5f, 4.1f, 3.7f);
+        // 画面冁E��更新・判定する敵弾の一覧、E
         private readonly List<KazumaBullet> bullets = new List<KazumaBullet>();
+        // 表示中の冁E��エフェクト�E一覧、E
         private readonly List<Pulse> pulses = new List<Pulse>();
-        // 発射までの残り秒数、無敵の残り秒数、パリィの残り秒数、終了後の経過秒数。
-        private float shotTimer, invincible, parryRemaining, endTimer;
+        // 発封E��での残り秒数、無敵の残り秒数、パリィの残り秒数、終亁E���E経過秒数、E
+        private float shotTimer, // 次の発封E��での残り秒数、E
+            invincible, // 無敵の残り秒数、E
+            parryRemaining, // パリィ受付�E残り秒数、E
+            endTimer; // ラウンド終亁E���E経過秒数、E
+        // 発封E��み弾幕�E通し番号。強ぁEↁEↁEの刁E��替えに使ぁE��E
         private int wave;
+        // 前フレームのプレイヤー位置。衝突計算用の移動区間�E始点、E
         private Vector3 previousPlayerPosition;
-        // 一時的な円形エフェクトの線、経過時間、色、最終半径をまとめたデータ。
-        private sealed class Pulse { public LineRenderer line; public float age; public Color color; public float radius; }
+        // 一時的な冁E��エフェクト�E線、経過時間、色、最終半征E��まとめたチE�Eタ、E
+        private sealed class Pulse
+        {
+            // 冁E��描画する線コンポ�Eネント、E
+            public LineRenderer line;
+            // 出現からの経過時間�E�秒）、E
+            public float age;
+            // 出現時�E基本色。時間経過で暗くする基準、E
+            public Color color;
+            // 拡大が終わったとき�E半征E��ワールド単位）、E
+            public float radius;
+        }
 
-        // Androidでは縦画面に固定し、最初のラウンドを開始する。
+        // Androidでは縦画面に固定し、最初�Eラウンドを開始する、E
         private void Start()
         {
             SoundManager.Instance.PlayBGM("BattleBGM");
@@ -77,7 +130,7 @@ namespace KazumaPrototype
             ResetRound();
         }
 
-        // 残った弾・演出を片付け、HP、タイマー、プレイヤーと風船を開始状態に戻す。
+        // 残った弾・演�Eを片付け、HP、タイマ�E、�Eレイヤーと風船を開始状態に戻す、E
         public void ResetRound()
         {
             // ============================================================
@@ -101,6 +154,7 @@ namespace KazumaPrototype
             }
 
             ClearBullets();
+            // pulse�E�一覧から取り出した、今回処琁E��る対象、E
             foreach (var pulse in pulses)
             {
                 if (pulse.line == null) continue;
@@ -117,15 +171,17 @@ namespace KazumaPrototype
             weakPoint.gameObject.SetActive(true);
             player.ResetPlayer(new Vector3(0f, 0.65f, -4.5f));
             previousPlayerPosition = player.transform.position;
+            // プレイヤーと風船で性能を�E有する。リトライしても裁E��中のスキル補正は保持する、E
+            balloon.SetPlayerParameters(player.Parameters);
             balloon.ResetBalloon(player.transform.position);
         }
 
-        // 毎フレームの進行処理。プレイヤー入力は1回読み、物理的な移動と衝突だけ細分化する。
+        // 毎フレームの進行�E琁E���Eレイヤー入力�E1回読み、物琁E��な移動と衝突だけ細刁E��する、E
         private void Update()
         {
-            // 画面が縦長でも左右のプレイ領域を確保するよう、カメラの表示範囲を広げる。
+            // 画面が縦長でも左右のプレイ領域を確保するよぁE��カメラの表示篁E��を庁E��る、E
             gameCamera.orthographicSize = Mathf.Max(9f, 5f / Mathf.Max(gameCamera.aspect, 0.1f));
-            // 処理落ち後に一度に大きく動くのを避けるため、1フレームで進める時間を0.1秒までにする。
+            // 処琁E��ち後に一度に大きく動くのを避けるため、Eフレームで進める時間めE.1秒までにする、E
             float dt = Mathf.Min(Time.deltaTime, 0.1f);
             UpdateDamageInvincibility(dt);
             UpdatePulses(dt);
@@ -138,21 +194,26 @@ namespace KazumaPrototype
             if (State != RoundState.Playing)
             {
                 endTimer += dt;
-                // 終了から0.75秒後、新しくタップ／クリックすると再開する。メニュー操作は不要。
+                // 終亁E��めE.75秒後、新しくタチE�E�E�クリチE��すると再開する。メニュー操作�E不要、E
                 if (endTimer > 0.75f && player.PressedThisFrame) ResetRound();
                 else player.transform.position = previousPlayerPosition;
                 return;
             }
             if (player.ReleasedThisFrame && balloon.Launch(player.FlickVelocity))
                 BeginReleaseProtection();
+            // 今回の入力を反映したプレイヤーの到達位置、E
             Vector3 currentPlayerPosition = player.transform.position;
-            // 1回の更新を最大1/120秒に分割してばねの計算を安定させる。
-            // プレイヤーの移動も区間ごとに補間して、移動中の衝突を判定する。
+            // 1回�E更新を最大1/120秒に刁E��してばねの計算を安定させる、E
+            // プレイヤーの移動も区間ごとに補間して、移動中の衝突を判定する、E
             int steps = Mathf.Max(1, Mathf.CeilToInt(dt / (1f / 120f)));
+            // 細刁E��した1回�Eのシミュレーション時間�E�秒）、E
             float step = dt / steps;
+            // i�E�この繰り返しで処琁E��る対象の番号。条件を満たす間、E��E��に更新する、E
             for (int i = 0; i < steps && State == RoundState.Playing; i++)
             {
+                // 今回の細刁E��区間�E始点となる�Eレイヤー位置、E
                 Vector3 from = Vector3.Lerp(previousPlayerPosition, currentPlayerPosition, i / (float)steps);
+                // 今回の細刁E��区間�E終点となる�Eレイヤー位置、E
                 Vector3 to = Vector3.Lerp(previousPlayerPosition, currentPlayerPosition, (i + 1f) / steps);
                 balloon.Simulate(to, player.Velocity, player.IsHeld, step);
                 TickBullets(from, to, step);
@@ -278,7 +339,7 @@ namespace KazumaPrototype
             }
         }
 
-        // 投擲成功時に無敵とパリィの受付を同時に開始し、白い円で合図する。
+        // 投擲成功時に無敵とパリィの受付を同時に開始し、白ぁE�Eで合図する、E
         public void BeginReleaseProtection()
         {
             invincible = releaseInvulnerability;
@@ -286,41 +347,50 @@ namespace KazumaPrototype
             EmitPulse(player.transform.position, Color.white, 0.8f);
         }
 
-        // 強さ1→2→3を繰り返す扇状弾幕。発射時点のプレイヤー方向を狙う。
+        // 強ぁEↁEↁEを繰り返す扁E��弾幕。発封E��点のプレイヤー方向を狙う、E
         private void FireWave()
         {
+            // 今回の弾幕�E強さ。発封E�Eた�Eに1ↁEↁEを繰り返す、E
             int power = 1 + wave++ % 3;
+            // ボスの弱点より少し手前に置く敵弾の発封E��置、E
             Vector3 origin = weakPoint.position + Vector3.back * 0.5f;
+            // 発封E��置から現在のプレイヤーへ向かぁE��ぁEの方向、E
             Vector3 direction = (player.transform.position - origin).normalized;
+            // 一度に発封E��る弾の数。強ぁEなめE発、それ以外�E5発、E
             int count = power == 3 ? 3 : 5;
+            // i�E�この繰り返しで処琁E��る対象の番号。条件を満たす間、E��E��に更新する、E
             for (int i = 0; i < count; i++)
             {
+                // 扁E��に14度ずつ方向をずらし、強さに応じた速さを与えた弾の速度、E
                 Vector3 velocity = Quaternion.AngleAxis((i - (count - 1) * 0.5f) * 14f, Vector3.up) * direction * (2.7f + power * 0.35f);
                 SpawnBullet(origin, velocity, power);
             }
         }
 
-        // 弾を生成して管理リストへ登録する。負荷対策として96個を上限とし、超えたらnullを返す。
+        // 弾を生成して管琁E��ストへ登録する。負荷対策として96個を上限とし、趁E��たらnullを返す、E
         public KazumaBullet SpawnBullet(Vector3 position, Vector3 velocity, int power)
         {
             if (bullets.Count >= 96) return null;
+            // 生�Eまた�E判定対象となる敵弾、E
             var bullet = Instantiate(bulletPrefab, transform);
             bullet.Initialize(position, velocity, power);
             bullets.Add(bullet);
             return bullet;
         }
 
-        // 弾を進めて衝突を解決する。playerFrom/Toはこの時間区間のプレイヤー移動前／後の位置。
+        // 弾を進めて衝突を解決する。playerFrom/Toはこ�E時間区間�Eプレイヤー移動前�E�後�E位置、E
         public void TickBullets(Vector3 playerFrom, Vector3 playerTo, float dt)
         {
-            // 通常の被弾より先にパリィを判定する。受付中に強さ3の弾へ接触すると全弾を消す。
+            // 通常の被弾より先にパリィを判定する。受付中に強ぁEの弾へ接触すると全弾を消す、E
+            // i�E�この繰り返しで処琁E��る対象の番号。条件を満たす間、E��E��に更新する、E
             for (int i = 0; i < bullets.Count; i++) bullets[i].Simulate(dt);
             if (parryRemaining > 0f)
             {
+                // bullet�E�一覧から取り出した、今回処琁E��る対象、E
                 foreach (var bullet in bullets)
                 {
                     if (bullet.Power == 3 && Sweep(bullet.PreviousPosition - playerFrom,
-                        bullet.transform.position - playerTo, bullet.Radius + KazumaDragPlayer.Radius, out _))
+                        bullet.transform.position - playerTo, bullet.Radius + KazumaDragPlayer.Radius * player.Parameters.ParryRange, out _))
                     {
                         ParryCount++;
                         ClearBullets();
@@ -330,18 +400,23 @@ namespace KazumaPrototype
                     }
                 }
             }
-            // 削除でリストの添字がずれても未処理の弾を飛ばさないよう、後ろから調べる。
+            // 削除でリスト�E添字がずれても未処琁E�E弾を飛�EさなぁE��ぁE��後ろから調べる、E
+            // i�E�この繰り返しで処琁E��る対象の番号。条件を満たす間、E��E��に更新する、E
             for (int i = bullets.Count - 1; i >= 0; i--)
             {
+                // 生�Eまた�E判定対象となる敵弾、E
                 var bullet = bullets[i];
+                // 敵弾がこの移動区間でプレイヤーに接触するか。playerTimeは接触時点�E�E�E�E�E�、E
                 bool hitsPlayer = Sweep(bullet.PreviousPosition - playerFrom,
                     bullet.transform.position - playerTo, bullet.Radius + KazumaDragPlayer.Radius, out float playerTime);
+                // 敵弾が水風船へ触れる時点�E�E�E�E�E�。未接触なら無限大のままにする、E
                 float ballTime = float.PositiveInfinity;
+                // 水風船の強さが足りており、移動区間で敵弾に接触するか、E
                 bool hitsBall = balloon.CanHit && balloon.Power >= bullet.Power && Sweep(
                     bullet.PreviousPosition - balloon.PreviousPosition,
                     bullet.transform.position - balloon.transform.position,
-                    bullet.Radius + KazumaWaterBalloon.Radius, out ballTime);
-                // 紐は弾を消さない。風船本体がプレイヤーより先に弾へ当たったときだけ防ぐ。
+                    bullet.Radius + balloon.HitRadius, out ballTime);
+                // 紐�E弾を消さなぁE��風船本体がプレイヤーより先に弾へ当たったときだけ防ぐ、E
                 if (hitsBall && (!hitsPlayer || ballTime <= playerTime))
                 {
                     RemoveBullet(i);
@@ -370,18 +445,20 @@ namespace KazumaPrototype
             }
         }
 
-        // 投擲中の風船だけボスに当たる。弱点と胴体のうち先に接触した方を採用する。
-        // 弱点なら速度に応じたダメージ、胴体ならダメージなしで風船を消費する。
+        // 投擲中の風船だけ�Eスに当たる。弱点と胴体�EぁE��先に接触した方を採用する、E
+        // 弱点なら速度に応じたダメージ、胴体ならダメージなしで風船を消費する、E
         public void CheckBossHit()
         {
             if (balloon.State != KazumaWaterBalloon.MotionState.Flying) return;
+            // 水風船が弱点に接触するか。weakTimeは移動区間�Eの最初�E接触時点�E�E�E�E�E�、E
             bool weakHit = Sweep(balloon.PreviousPosition - weakPoint.position,
-                balloon.transform.position - weakPoint.position, KazumaWaterBalloon.Radius + 0.55f, out float weakTime);
+                balloon.transform.position - weakPoint.position, balloon.HitRadius + 0.55f, out float weakTime);
+            // 水風船が胴体に接触するか。bodyTimeは移動区間�Eの最初�E接触時点�E�E�E�E�E�、E
             bool bodyHit = Sweep(balloon.PreviousPosition - boss.position,
-                balloon.transform.position - boss.position, KazumaWaterBalloon.Radius + 1.15f, out float bodyTime);
+                balloon.transform.position - boss.position, balloon.HitRadius + 1.15f, out float bodyTime);
             if (weakHit && (!bodyHit || weakTime <= bodyTime))
             {
-                BossHealth = Mathf.Max(0f, BossHealth - KazumaWaterBalloon.DamageAtSpeed(balloon.Velocity.magnitude));
+                BossHealth = Mathf.Max(0f, BossHealth - balloon.CurrentDamage);
                 EmitPulse(weakPoint.position, Color.yellow, 1.6f);
                 balloon.Consume();
                 Debug.Log($"Kazuma: weak point hit. Boss HP {BossHealth:0}/{bossMaxHealth:0}", this);
@@ -394,27 +471,30 @@ namespace KazumaPrototype
             }
         }
 
-        // 移動区間と球の衝突を調べ、高速な弾やフリックのすり抜けを防ぐ。
-        // from/toは相手から見た相対位置、radiusは双方の半径の合計。
-        // timeは最初に接触する時点（0=区間の開始、1=終了）。戻り値がtrueのときに使う。
+        // 移動区間と琁E�E衝突を調べ、E��速な弾めE��リチE��のすり抜けを防ぐ、E
+        // from/toは相手から見た相対位置、radiusは双方の半征E�E合計、E
+        // timeは最初に接触する時点�E�E=区間�E開始、E=終亁E��。戻り値がtrueのときに使ぁE��E
         public static bool Sweep(Vector3 from, Vector3 to, float radius, out float time)
         {
             time = 0f;
-            // 開始時点ですでに重なっていれば、時刻0で接触している。
+            // 開始時点ですでに重なってぁE��ば、時刻0で接触してぁE��、E
             float c = from.sqrMagnitude - radius * radius;
             if (c <= 0f) return true;
+            // 相手から見た、移動区間�E始点から終点への変化量、E
             Vector3 delta = to - from;
+            // 衝突�E二次方程式�E係数。移動量の長さ�E2乗、E
             float a = delta.sqrMagnitude;
             if (a < 0.000001f) return false;
+            // 衝突�E二次方程式�E係数。始点と移動方向�E冁E��、E
             float b = Vector3.Dot(from, delta);
-            // 移動する点が球面へ到達する二次方程式を解く。判別式が負なら接触しない。
+            // 移動する点が球面へ到達する二次方程式を解く。判別式が負なら接触しなぁE��E
             float discriminant = b * b - a * c;
             if (discriminant < 0f) return false;
             time = (-b - Mathf.Sqrt(discriminant)) / a;
             return time >= 0f && time <= 1f;
         }
 
-        // 勝敗を確定し、色と円形エフェクトで結果を示して残りの弾を片付ける。
+        // 勝敗を確定し、色と冁E��エフェクトで結果を示して残りの弾を片付ける、E
         private void EndRound(bool cleared)
         {
             State = cleared ? RoundState.Cleared : RoundState.Failed;
@@ -425,26 +505,29 @@ namespace KazumaPrototype
             Debug.Log(cleared ? "Kazuma: CLEAR. Tap/click to restart." : "Kazuma: HIT. Tap/click to retry.", this);
         }
 
-        // Destroyはフレーム末尾まで遅延するため、先に非表示にして管理リストから除く。
+        // Destroyはフレーム末尾まで遁E��するため、�Eに非表示にして管琁E��ストから除く、E
         private void RemoveBullet(int index)
         {
             bullets[index].gameObject.SetActive(false);
             Destroy(bullets[index].gameObject);
             bullets.RemoveAt(index);
         }
-        // リスト末尾から全弾を削除する。リトライ、パリィ、ラウンド終了時に使用する。
+        // リスト末尾から全弾を削除する。リトライ、パリィ、ラウンド終亁E��に使用する、E
         private void ClearBullets()
         {
+            // i�E�この繰り返しで処琁E��る対象の番号。条件を満たす間、E��E��に更新する、E
             for (int i = bullets.Count - 1; i >= 0; i--) RemoveBullet(i);
         }
 
-        // 指定位置に広がる円を作る。radiusは最終半径で、同時表示は8個まで。
+        // 持E��位置に庁E��る�Eを作る。radiusは最終半征E��、同時表示は8個まで、E
         private void EmitPulse(Vector3 position, Color color, float radius)
         {
             if (pulses.Count >= 8) return;
+            // 冁E��エフェクト用に作る一時的なGameObject、E
             var go = new GameObject("Gameplay pulse");
             go.transform.SetParent(transform);
             go.transform.position = position;
+            // 線を表示するLineRenderer、E
             var line = go.AddComponent<LineRenderer>();
             line.sharedMaterial = effectMaterial;
             line.useWorldSpace = false;
@@ -452,20 +535,25 @@ namespace KazumaPrototype
             line.positionCount = 40;
             line.widthMultiplier = 0.07f;
             line.startColor = line.endColor = color;
+            // i�E�この繰り返しで処琁E��る対象の番号。条件を満たす間、E��E��に更新する、E
             for (int i = 0; i < 40; i++)
             {
+                // 冁E��上�E配置に使用する角度�E�ラジアン�E�、E
                 float angle = i * Mathf.PI * 2f / 40f;
                 line.SetPosition(i, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * 0.2f);
             }
             pulses.Add(new Pulse { line = line, color = color, radius = radius });
         }
-        // 円を0.45秒で拡大・暗くし、寿命を迎えたら削除する。
+        // 冁E��0.45秒で拡大・暗くし、寿命を迎えたら削除する、E
         private void UpdatePulses(float dt)
         {
+            // i�E�この繰り返しで処琁E��る対象の番号。条件を満たす間、E��E��に更新する、E
             for (int i = pulses.Count - 1; i >= 0; i--)
             {
+                // 更新また�E削除対象の冁E��エフェクチE個�EのチE�Eタ、E
                 var pulse = pulses[i];
                 pulse.age += dt;
+                // エフェクト�E寿命に対する経過割合、Eになると削除する、E
                 float t = pulse.age / 0.45f;
                 if (t >= 1f)
                 {
@@ -473,11 +561,14 @@ namespace KazumaPrototype
                     pulses.RemoveAt(i);
                     continue;
                 }
+                // 冁E��エフェクト�E表示色、E
                 Color color = pulse.color * (1f - t);
                 color.a = 1f;
                 pulse.line.startColor = pulse.line.endColor = color;
+                // j�E�この繰り返しで処琁E��る対象の番号。条件を満たす間、E��E��に更新する、E
                 for (int j = 0; j < 40; j++)
                 {
+                    // 冁E��上�E配置に使用する角度�E�ラジアン�E�、E
                     float angle = j * Mathf.PI * 2f / 40;
                     pulse.line.SetPosition(j, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Lerp(0.2f, pulse.radius, t));
                 }
