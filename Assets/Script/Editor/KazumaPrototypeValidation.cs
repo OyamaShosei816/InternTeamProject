@@ -115,6 +115,9 @@ namespace KazumaPrototype.Editor
             // i：この繰り返しで処理する対象の番号。条件を満たす間、順番に更新する。
             for (int i = 0; i < 2400; i++) ball.Simulate(anchor, Vector3.zero, true, 1f / 120f);
             Check(ball.Power == 1, "Holding still orbits without charging");
+            // 角度が増える左回りと、角度が減る右回りの両方で強さ1→2→3へ進むことを確認する。
+            CheckChargeDirection(ball, anchor, 1);
+            CheckChargeDirection(ball, anchor, -1);
             ball.ResetBalloon(anchor);
             // 小さな円を描いてプレイヤーを動かす条件を作り、段階アップと紐の最大長を確認する。
             int lastPower = 1;
@@ -205,6 +208,30 @@ namespace KazumaPrototype.Editor
             Check(arena.State == KazumaPrototypeArena.RoundState.Cleared && arena.BossHealth == 0f, "Weak-point throws deplete HP and clear the round");
             arena.ResetRound();
             RunParameterChecks(arena, player, ball);
+        }
+
+        // ballは対象の水風船、anchorは支点、directionは角度を増やす場合1、減らす場合-1。
+        // 軌道上に2度ずつ配置し、時間を進めずに強化判定だけを通して回転方向の不具合を再現する。
+        private static void CheckChargeDirection(KazumaWaterBalloon ball, Vector3 anchor, int direction)
+        {
+            ball.ResetBalloon(anchor);
+            // ログに表示する回転方向。上から見たX/Z平面で区別する。
+            string label = direction > 0 ? "Counterclockwise" : "Clockwise";
+            // iは2度単位の更新回数。1200回で約6.67周となり、強さ3までの閾値を越える。
+            for (int i = 1; i <= 1200; i++)
+            {
+                // 初期位置の-90度から指定方向へ進めた角度（ラジアン）。
+                float angle = (-90f + direction * i * 2f) * Mathf.Deg2Rad;
+                ball.transform.position = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                // 加算前の進捗。±180度をまたぐ更新や逆回転でも減らないことを確認する。
+                float previousCharge = ball.ChargedRevolutions;
+                ball.Simulate(anchor, Vector3.right, true, 0f);
+                if (ball.ChargedRevolutions + 0.0001f < previousCharge)
+                    throw new InvalidOperationException(label + " rotation reduced charge");
+                if (i == 480) Check(ball.Power == 1, label + " remains tier one before three revolutions");
+                if (i == 600) Check(ball.Power == 2, label + " reaches tier two after three revolutions");
+            }
+            Check(ball.Power == 3, label + " reaches tier three after six revolutions");
         }
 
         // 6種類の補正を1つずつ変更し、実際の判定・投擲・成長・ダメージ・回復へ反映されるか確認する。
