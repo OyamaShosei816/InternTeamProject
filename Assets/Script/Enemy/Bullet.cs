@@ -2,42 +2,116 @@ using UnityEngine;
 
 namespace Prototype
 {
-    // æ•µå¼¾1å€‹ã®å¼·ã•ãƒ»ç§»å‹•ãƒ»è¦‹ãŸç›®ã‚’ç®¡ç†ã™ã‚‹ã€‚
-    // æ›´æ–°ã¨å½“ãŸã‚Šåˆ¤å®šã¯ PrototypeArena ãŒã¾ã¨ã‚ã¦è¡Œã†ãŸã‚ã€ã“ã®ã‚¯ãƒ©ã‚¹ã«ã¯ Update ã‚’ç½®ã‹ãªã„ã€‚
+    // æ•µå¼¾1å€‹ãEå¼·ã•ãEç§»å‹•ãEè¦‹ãŸç›®ã‚’ç®¡çE™ã‚‹ã€E
+    // æ›´æ–°ã¨å½“ãŸã‚Šåˆ¤å®šãE PrototypeArena ãŒã¾ã¨ã‚ã¦è¡Œã†ãŸã‚ã€ã“ã®ã‚¯ãƒ©ã‚¹ã«ã¯ Update ã‚’ç½®ã‹ãªãE€E
     public sealed class Bullet : MonoBehaviour
     {
-        // å¼¾ã®è¡¨ç¤ºéƒ¨åˆ†ã€‚Prefabä½œæˆæ™‚ã«Builderã‹ã‚‰è¨­å®šã™ã‚‹ã€‚
-        [Header("æ•µå¼¾ã®è¦‹ãŸç›®ï¼šè¡¨ç¤ºç”¨Renderer")]
-        [Tooltip("æ•µå¼¾Prefabå†…ã®çƒã®Rendererã‚’è¨­å®šã—ã¾ã™ã€‚å¼·ã•ã«å¿œã˜ã¦è‰²ãŒå¤‰ã‚ã‚Šã¾ã™ã€‚")]
+        // ============================================================
+        // Inspectorİ’è
+        // ============================================================
+        [Header("Enemy Bullet Appearance")]
+        [Tooltip("Renderer used to change the bullet color based on its power.")]
         [SerializeField] private Renderer body;
-        // å¼·ã•ã¯1ï½3ã€‚æ°´é¢¨èˆ¹ãŒåŒã˜å¼·ã•ä»¥ä¸Šãªã‚‰ã€ã“ã®å¼¾ã‚’æ¶ˆã›ã‚‹ã€‚
+
+        // ============================================================
+        // ’e‚Ìó‘Ô
+        // ’e‚Ì‹­‚³B
+        // Lv1`Lv3‚Ì3’iŠK‚ÅŠÇ—‚·‚éB
+        // ============================================================
         public int Power { get; private set; }
-        // å¼·ã•3ã®å¼¾ã ã‘å¤§ãã„ã€‚å½“ãŸã‚Šåˆ¤å®šã«ã¯è¦‹ãŸç›®ã¨ã¯åˆ¥ã«ã“ã®åŠå¾„ã‚’ä½¿ã†ã€‚
+
+        // ’e‚Ì“–‚½‚è”»’è”¼ŒaB
+        // Lv3‚Ì‚İ’Êí’e‚æ‚è‘å‚«‚­‚·‚éB
         public float Radius => Power == 3 ? 0.25f : 0.17f;
-        // ãƒ¯ãƒ¼ãƒ«ãƒ‰åº§æ¨™ã§ã®é€Ÿåº¦ï¼ˆ1ç§’å½“ãŸã‚Šã®ç§»å‹•é‡ï¼‰ã€‚
+
+        // ƒ[ƒ‹ƒhÀ•Wã‚Å‚ÌˆÚ“®‘¬“xB
         public Vector3 Velocity { get; private set; }
-        // ç§»å‹•å‰ã®ä½ç½®ã€‚é«˜é€Ÿç§»å‹•ã§ã‚‚å¼¾ãŒç›¸æ‰‹ã‚’ã™ã‚ŠæŠœã‘ãªã„ã‚ˆã†ã€ç§»å‹•åŒºé–“å…¨ä½“ã®åˆ¤å®šã«ä½¿ã†ã€‚
+
+        // 1ƒtƒŒ[ƒ€‘O‚Ì’e‚ÌˆÊ’uB
+        // ‚‘¬ˆÚ“®‚Ì‚·‚è”²‚¯–h~”»’è‚Ég—p‚·‚éB
         public Vector3 PreviousPosition { get; private set; }
-        // ç”Ÿæˆç›´å¾Œã«å‘¼ã¶åˆæœŸè¨­å®šã€‚å‡ºç¾ä½ç½®ãƒ»é€Ÿåº¦ãƒ»å¼·ã•ã‚’è¨­å®šã—ã€å¼·ã•ã«åˆã‚ã›ã¦å¤§ãã•ã¨è‰²ã‚’å¤‰ãˆã‚‹ã€‚
-        public void Initialize(Vector3 position, Vector3 velocity, int power)
+
+
+        // ============================================================
+        // ‰Šú‰»
+        // “G’e¶¬‚Ì‰Šúİ’è‚ğs‚¤B
+        // ˆÊ’uE‘¬“xE‹­‚³E‘å‚«‚³EF‚ğİ’è‚·‚éB
+        // ============================================================
+        public void Initialize(
+            Vector3 position,
+            Vector3 velocity,
+            int power)
         {
-            transform.position = PreviousPosition = position;
+            transform.position = position;
+            PreviousPosition = position;
+
             Velocity = velocity;
+
+            // ’e‚Ì‹­‚³‚ÍLv1`Lv3‚Ì”ÍˆÍ‚É§ŒÀ‚·‚éB
             Power = Mathf.Clamp(power, 1, 3);
-            transform.localScale = Vector3.one * Radius * 2f;
-            // å…±æœ‰ãƒãƒ†ãƒªã‚¢ãƒ«è‡ªä½“ã‚’å¤‰æ›´ã›ãšã€ã“ã®å¼¾ã ã‘ã®è‰²ã‚’è¨­å®šã™ã‚‹ã€‚
-            var properties = new MaterialPropertyBlock();
-            // å¼·ã•1ã¯ç·‘ã€2ã¯é»„ã€3ã¯ç´«ã§è¡¨ç¤ºã™ã‚‹ãŸã‚ã®è‰²ã€‚
-            Color color = Power == 1 ? new Color(0.25f, 1f, 0.3f) : Power == 2 ? new Color(1f, 0.8f, 0.1f) : new Color(1f, 0.25f, 0.85f);
-            properties.SetColor("_BaseColor", color);
-            properties.SetColor("_Color", color);
+
+            // “–‚½‚è”»’è”¼Œa‚É‡‚í‚¹‚ÄŒ©‚½–Ú‚Ì‘å‚«‚³‚à•ÏX‚·‚éB
+            transform.localScale =
+                Vector3.one * Radius * 2.0f;
+
+            UpdateAppearance();
+        }
+
+        // ============================================================
+        // Œ©‚½–Ú
+        // ’e‚Ì‹­‚³‚É‰‚¶‚ÄF‚ğ•ÏX‚·‚éB
+        // Lv1FÂ
+        // Lv2F‰©
+        // Lv3F‡
+        // ============================================================
+        private void UpdateAppearance()
+        {
+            if (body == null)
+            {
+                // •\¦—pRenderer‚ª–¢İ’è‚Ìê‡‚ÍŒx‚ğo‚·B
+                Debug.LogWarning(
+                    $"{nameof(Bullet)}: Renderer is not assigned.",
+                    this);
+                return;
+            }
+
+            Color color = Power switch
+            {
+                1 => new Color(0.05f, 0.65f, 1.0f),
+                2 => new Color(1.0f, 0.9f, 0.05f),
+                3 => new Color(0.55f, 0.15f, 0.8f),
+                _ => Color.white
+            };
+
+            // sharedMaterial‚ğ’¼Ú•ÏX‚·‚é‚Æ
+            // ‘¼‚Ì“G’e‚É‚àF•ÏX‚ª”½‰f‚³‚ê‚é‚½‚ßA
+            // MaterialPropertyBlock‚ğg—p‚·‚éB
+            MaterialPropertyBlock properties =
+                new MaterialPropertyBlock();
+
+            properties.SetColor(
+                "_BaseColor",
+                color);
+
+            properties.SetColor(
+                "_Color",
+                color);
+
             body.SetPropertyBlock(properties);
         }
-        // dt ã¯ä»Šå›é€²ã‚ã‚‹æ™‚é–“ï¼ˆç§’ï¼‰ã€‚ä½ç½®ã‚’è¨˜éŒ²ã—ã¦ã‹ã‚‰ç›´ç·šç§»å‹•ã™ã‚‹ã€‚
-        public void Simulate(float dt)
+
+        // ============================================================
+        // ˆÚ“®
+        // w’è‚³‚ê‚½ŠÔ•ª‚¾‚¯“G’e‚ğˆÚ“®‚³‚¹‚éB
+        // ˆÚ“®‘O‚ÌˆÊ’u‚ğ•Û‘¶‚µ‚Ä‚©‚çˆÚ“®‚·‚é‚±‚Æ‚ÅA
+        // ”²‚¯–h~”»’è‚ğs‚¦‚é‚æ‚¤‚É‚·‚éB
+        // ============================================================
+        public void Simulate(float deltaTime)
         {
             PreviousPosition = transform.position;
-            transform.position += Velocity * dt;
+
+            transform.position +=
+                Velocity * deltaTime;
         }
     }
 }

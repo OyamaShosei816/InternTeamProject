@@ -67,24 +67,14 @@ public class SoundManager : MonoBehaviour
 
 
         // =====================================================
-        // Scene‚ðŒ×‚¢‚Å‚àŽc‚·
-        // =====================================================
-
-        DontDestroyOnLoad(gameObject);
-
-
-        // =====================================================
         // BGM—pAudioSource
         // =====================================================
-
         bgmAudioSource =
             gameObject.AddComponent<AudioSource>();
-
 
         // =====================================================
         // SE—pAudioSource
         // =====================================================
-
         for (int i = 0;
              i < seAudioSourceList.Length;
              ++i)
@@ -93,11 +83,9 @@ public class SoundManager : MonoBehaviour
                 gameObject.AddComponent<AudioSource>();
         }
 
-
         // =====================================================
         // BGM Dictionary
         // =====================================================
-
         foreach (var data in bgmData)
         {
             if (data == null ||
