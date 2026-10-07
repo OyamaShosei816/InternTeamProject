@@ -250,6 +250,7 @@ MonoBehaviour:
   baseParryRadius: 0.6
   showParryRange: 1
   weakPointHitStop: 0.15
+  bulletHitStop: 0.025
   cameraShakeStrength: 0.12
   cameraShakeDuration: 0.15
   cameraShakeFrequency: 35

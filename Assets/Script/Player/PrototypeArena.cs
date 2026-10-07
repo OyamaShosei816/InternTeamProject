@@ -76,6 +76,10 @@ namespace KazumaPrototype
         [Header("弱点命中：ヒットストップ時間（秒）")]
         [Tooltip("仕様値0.15秒。停止中もカメラは揺れます。0で停止だけを無効にします。")]
         [SerializeField, Range(0f, 0.3f)] private float weakPointHitStop = 0.15f;
+        // キューが敵弾を消した際の短い停止時間。停止が終わってもキューは消費しない。
+        [Header("弾消し：ヒットストップ時間（秒）")]
+        [Tooltip("初期値0.025秒。プレイヤー・キュー・敵弾を短く止めます。同時に複数の弾を消しても時間は加算されません。0で停止を無効にします。")]
+        [SerializeField, Range(0f, 0.1f)] private float bulletHitStop = 0.025f;
         // 弱点命中時に、カメラを画面の横・縦方向へ揺らす最大距離。
         [Header("弱点命中：カメラの揺れ幅")]
         [Tooltip("ワールド単位。初期値0.12。0でカメラシェイクを無効にします。")]
@@ -533,6 +537,9 @@ namespace KazumaPrototype
                         emittedEraseEffect = true;
                     }
                     RemoveBullet(i);
+                    // 弾消しではキューの消費を予約せず、停止後も公転・投擲を継続する。
+                    // この区間内の同時接触はすべて処理し、次の移動区間から進行を止める。
+                    BeginHitStop(bulletHitStop);
                     continue;
                 }
                 if (hitsPlayer)

@@ -138,8 +138,29 @@ namespace KazumaPrototype.Editor
                 Check(rings[0].transform.position == ball.transform.position
                     && Mathf.Abs(rings[0].GetPosition(0).magnitude - ball.HitRadius) < 0.001f,
                     "Erase ring begins on the cue outer circumference");
+                // 停止前のキュー状態。弾消しでは公転・投擲を消費せず、そのまま復帰させる。
+                KazumaWaterBalloon.MotionState cueState = ball.State;
+                Check(arena.IsHitStopped && !arena.IsCameraShaking && ball.CanHit,
+                    $"Cue erase starts a short hit stop without weak-point shake, flying {flying}");
+                // 停止を確認するため、キューやプレイヤーから離れた場所に動く敵弾を置く。
+                KazumaBullet movingBullet = arena.SpawnBullet(anchor + Vector3.right * 3f, Vector3.forward, 1);
+                // 停止開始時の敵弾位置。
+                Vector3 movingBulletPosition = movingBullet.transform.position;
+                // 停止開始時のキュー位置。
+                Vector3 eraseCuePosition = ball.transform.position;
+                arena.AdvanceFrame(0.1f, 0.01f);
+                Check(arena.IsHitStopped && movingBullet.transform.position == movingBulletPosition
+                    && ball.transform.position == eraseCuePosition && player.transform.position == anchor
+                    && Mathf.Abs(rings[0].GetPosition(0).magnitude - ball.HitRadius) < 0.001f,
+                    "Cue erase freezes gameplay and its ring while tracking real elapsed time");
+                arena.AdvanceHitStop(0.014f);
+                Check(arena.IsHitStopped, "Cue erase hit stop lasts through 0.024 seconds");
+                arena.AdvanceHitStop(0.002f);
+                Check(!arena.IsHitStopped && ball.State == cueState && ball.CanHit,
+                    "Simultaneous erasures finish at 0.025 seconds without stacking or consuming the cue");
                 arena.AdvanceFrame(0.1f, 0.1f);
                 Check(rings[0].GetPosition(0).magnitude > ball.HitRadius, "Erase ring expands over time");
+                Check(movingBullet.transform.position.z > movingBulletPosition.z, "Enemy bullets resume after the short erase hit stop");
                 // iは経過フレーム。0.4秒進めて、輪の初期表示時間0.3秒を超える。
                 for (int i = 0; i < 4; i++) arena.AdvanceFrame(0.1f, 0.1f);
                 Check(EraseRings(arena).Length == 0, "Erase ring disappears after its configured lifetime");
@@ -149,6 +170,7 @@ namespace KazumaPrototype.Editor
             arena.SpawnBullet(ball.transform.position, Vector3.zero, 3);
             arena.TickBullets(anchor, anchor, 0f);
             Check(arena.ActiveBulletCount == 1 && EraseRings(arena).Length == 0, "A surviving enemy bullet does not emit an erase ring");
+            Check(!arena.IsHitStopped, "A stronger surviving enemy bullet does not trigger erase hit stop");
 
             arena.ResetRound();
             // 揺れる前のカメラ位置。
@@ -212,6 +234,8 @@ namespace KazumaPrototype.Editor
             var settings = new SerializedObject(arena);
             // 変更後に戻すヒットストップ時間。
             float stopDuration = settings.FindProperty("weakPointHitStop").floatValue;
+            // 変更後に戻す弾消しの停止時間。輪の表示設定とは独立している。
+            float eraseStopDuration = settings.FindProperty("bulletHitStop").floatValue;
             // 変更後に戻すカメラの揺れ幅。
             float shakeStrength = settings.FindProperty("cameraShakeStrength").floatValue;
             // 変更後に戻す弾消しの輪の表示時間。
@@ -230,10 +254,21 @@ namespace KazumaPrototype.Editor
                 arena.SpawnBullet(ball.transform.position, Vector3.zero, 1);
                 arena.TickBullets(anchor, anchor, 0f);
                 Check(arena.ActiveBulletCount == 0 && EraseRings(arena).Length == 0, "Zero ring duration disables only the erase visual");
+                Check(arena.IsHitStopped, "Disabling the erase ring preserves its short hit stop");
+                settings.FindProperty("bulletHitStop").floatValue = 0f;
+                settings.FindProperty("bulletEraseDuration").floatValue = ringDuration;
+                settings.ApplyModifiedPropertiesWithoutUndo();
+                arena.ResetRound();
+                ball.Simulate(anchor, Vector3.zero, true, 0f);
+                arena.SpawnBullet(ball.transform.position, Vector3.zero, 1);
+                arena.TickBullets(anchor, anchor, 0f);
+                Check(arena.ActiveBulletCount == 0 && !arena.IsHitStopped && ball.CanHit && EraseRings(arena).Length == 1,
+                    "Zero erase stop duration preserves cue and ring while disabling only hit stop");
             }
             finally
             {
                 settings.FindProperty("weakPointHitStop").floatValue = stopDuration;
+                settings.FindProperty("bulletHitStop").floatValue = eraseStopDuration;
                 settings.FindProperty("cameraShakeStrength").floatValue = shakeStrength;
                 settings.FindProperty("bulletEraseDuration").floatValue = ringDuration;
                 settings.ApplyModifiedPropertiesWithoutUndo();
