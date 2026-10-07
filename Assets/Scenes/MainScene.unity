@@ -236,8 +236,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5dd3b51bfea1b564fb07a3f50ec6ff7e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaPrototypeArena
-  gameCamera: {fileID: 489025467}
   player: {fileID: 1265370326}
+  gameCamera: {fileID: 489025467}
   balloon: {fileID: 631444905}
   bulletPrefab: {fileID: 6181908536368758165, guid: 9e5b367860093ec42baaae5f3894fb41, type: 3}
   boss: {fileID: 1863805679}
@@ -253,6 +253,16 @@ MonoBehaviour:
   - {fileID: 1094800355}
   - {fileID: 12616836}
   - {fileID: 1139083180}
+  weakPointHitStop: 0.15
+  cameraShakeStrength: 0.12
+  cameraShakeDuration: 0.15
+  cameraShakeFrequency: 35
+  bodyHitStop: 0.04
+  bulletHitStop: 0.025
+  bulletEraseColor: {r: 0.4, g: 1, b: 1, a: 1}
+  bulletEraseExpansion: 0.8
+  bulletEraseDuration: 0.3
+  bulletEraseWidth: 0.09
 --- !u!4 &431491657
 Transform:
   m_ObjectHideFlags: 0
@@ -499,7 +509,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: af32365ee6fadb94484b79f0b77edf25, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::KazumaPrototype.KazumaWaterBalloon
+  m_EditorClassIdentifier: Assembly-CSharp::Prototype.WaterBalloon
 --- !u!4 &631444907 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7832358170989371430, guid: 218ced46014985541a87b3f930319527, type: 3}
@@ -635,7 +645,7 @@ PrefabInstance:
     - target: {fileID: -8523192801283230984, guid: 3bc46d4a73583ee4cba3dd51db7beec9, type: 3}
       propertyPath: hpSlider
       value: 
-      objectReference: {fileID: 1931932814}
+      objectReference: {fileID: 0}
     - target: {fileID: 4572894688408142182, guid: 3bc46d4a73583ee4cba3dd51db7beec9, type: 3}
       propertyPath: m_Name
       value: Boss
@@ -702,23 +712,39 @@ PrefabInstance:
       value: MainGameUI
       objectReference: {fileID: 0}
     - target: {fileID: 3155286590031704007, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3155286590031704007, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3155286590031704007, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 9.2045
+      objectReference: {fileID: 0}
+    - target: {fileID: 3155286590031704007, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 7
+      value: -296
       objectReference: {fileID: 0}
     - target: {fileID: 3972319013912928919, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -845
       objectReference: {fileID: 0}
     - target: {fileID: 4827361145685912895, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -147
+      objectReference: {fileID: 0}
+    - target: {fileID: 4827361145685912895, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -40
+      value: -460
       objectReference: {fileID: 0}
     - target: {fileID: 5185846162409390464, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -845
       objectReference: {fileID: 0}
-    - target: {fileID: 5244482485161889652, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
-      propertyPath: m_AnchoredPosition.y
+    - target: {fileID: 5359557280095111026, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
+      propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5733163726936025039, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
@@ -726,23 +752,7 @@ PrefabInstance:
       value: -845
       objectReference: {fileID: 0}
     - target: {fileID: 6249715127891776512, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
-      propertyPath: m_UiScaleMode
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6249715127891776512, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
       propertyPath: m_MatchWidthOrHeight
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6249715127891776512, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
-      propertyPath: m_ReferenceResolution.x
-      value: 1080
-      objectReference: {fileID: 0}
-    - target: {fileID: 6249715127891776512, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
-      propertyPath: m_ReferenceResolution.y
-      value: 2340
-      objectReference: {fileID: 0}
-    - target: {fileID: 6954896284540732798, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
-      propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8518384759471667059, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
@@ -835,17 +845,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6000582344729667215, guid: 3bc46d4a73583ee4cba3dd51db7beec9, type: 3}
   m_PrefabInstance: {fileID: 1385716528}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1931932814 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4253537883650143333, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
-  m_PrefabInstance: {fileID: 1408982228}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Slider
 --- !u!1 &2029331469
 GameObject:
   m_ObjectHideFlags: 0
