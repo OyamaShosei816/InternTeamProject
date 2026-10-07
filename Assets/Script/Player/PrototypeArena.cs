@@ -62,6 +62,9 @@ namespace Prototype
         [Tooltip("ラウンド開始時のボスのHPです。")]
         [SerializeField] private float bossMaxHealth = 150f;
 
+        [Header("ボスのHPバー")]
+        [SerializeField] private UnityEngine.UI.Slider bossHpSlider;
+
         [Header("難易度：弾の発射間隔")]
         [Tooltip("弾を発射する間隔")]
         [SerializeField] private float shotInterval = 1.5f;
@@ -555,6 +558,9 @@ namespace Prototype
             pulses.Clear();
             State = RoundState.Playing;
             BossHealth = bossMaxHealth;
+            // ボスのHPをゲージUIに反映
+            UpdateBossHPUI();
+
             ParryCount = wave = 0;
             shotTimer = 2.5f;
             invincible = parryRemaining = endTimer = 0f;
@@ -1550,6 +1556,8 @@ namespace Prototype
                     SoundManager.Instance.PlaySE("BossWeakSE");
                 }
                 BossHealth = Mathf.Max(0f, BossHealth - balloon.CurrentDamage);
+                //ボスのHPをゲージUIに反映
+                UpdateBossHPUI();
                 EmitPulse(weakPoint.position, Color.yellow, 1.6f);
                 StopOnBalloonImpact(weakPointHitStop);
                 BeginCameraShake();
@@ -1766,6 +1774,22 @@ namespace Prototype
                     pulse.line.SetPosition(j, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Lerp(pulse.startRadius, pulse.radius, t));
                 }
             }
+        }
+
+        private void UpdateBossHPUI()
+        {
+            if(bossHpSlider == null)
+            {
+                return;
+            }
+
+            bossHpSlider.minValue = 0.0f;
+            bossHpSlider.maxValue = bossMaxHealth;
+            bossHpSlider.wholeNumbers = false;
+            bossHpSlider.interactable = false;
+            bossHpSlider.transition = UnityEngine.UI.Selectable.Transition.None;
+            bossHpSlider.value = BossHealth;
+
         }
     }
 }
