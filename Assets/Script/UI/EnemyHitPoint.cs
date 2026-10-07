@@ -15,7 +15,7 @@ public class EnemyHitPoint : MonoBehaviour
         currentHp = maxHp; // ゲーム開始時に現在の体力を最大値に設定
         hpSlider.maxValue = maxHp; // スライダーの最大値を設定
         hpSlider.value = currentHp; // スライダーの初期値を現在の体力に設定
-        fillArea.color = Color.green; // HPバー初期カラー
+        //fillArea.color = Color.green; // HPバー初期カラー
     }
 
     // 攻撃ヒット時にボスのHPを減少
@@ -24,7 +24,7 @@ public class EnemyHitPoint : MonoBehaviour
         currentHp -= damage; // 指定されたダメージ分、体力を減少させる
         currentHp = Mathf.Clamp(currentHp, 0, maxHp); // 体力が 0 を下回らず、最大値を超えないように制限
         hpSlider.value = currentHp; // スライダー UI に反映
-        ChangeColor(currentHp); // HPバーの色変更
+        //ChangeColor(currentHp); // HPバーの色変更
     }
 
     // HP残量に応じてバーの色を変更する
