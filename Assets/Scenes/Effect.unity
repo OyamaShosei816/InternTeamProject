@@ -826,6 +826,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Prototype.EffectLayerScope
   additionalEffects:
   - {fileID: 2690688}
+  - {fileID: 6684726665510013092, guid: dba5863eb383e004aa06f8b044f749e1, type: 3}
+  - {fileID: 3324568746659551704, guid: e99a9937809697440aa797152df6599d, type: 3}
+  - {fileID: 7174651144016609859, guid: 2a2b825a8948e0f42be48e7f753de124, type: 3}
 --- !u!4 &841660780
 Transform:
   m_ObjectHideFlags: 0
