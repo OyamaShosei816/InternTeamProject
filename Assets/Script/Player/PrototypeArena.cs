@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 namespace Prototype
 {
@@ -10,6 +11,7 @@ namespace Prototype
     {
         // 繝励Ξ繧､荳ｭ繝ｻ繧ｯ繝ｪ繧｢繝ｻ螟ｱ謨励・3迥ｶ諷九らｵゆｺ・ｾ後・荳螳壽凾髢薙ｒ鄂ｮ縺・※謚ｼ縺礼峩縺吶→蜀埼幕縺ｧ縺阪ｋ縲・
         public enum RoundState { Playing, Cleared, Failed }
+        private float roundElapsed;
         [Header("操作対象：プレイヤー")]
         [Tooltip("シーン内のプレイヤーのDragPlayerを設定します。")]
         [SerializeField] private DragPlayer player;
@@ -519,6 +521,7 @@ namespace Prototype
         // 谿九▲縺溷ｼｾ繝ｻ貍泌・繧堤援莉倥￠縲？P縲√ち繧､繝槭・縲√・繝ｬ繧､繝､繝ｼ縺ｨ鬚ｨ闊ｹ繧帝幕蟋狗憾諷九↓謌ｻ縺吶・
         public void ResetRound()
         {
+            roundElapsed = 0f;
             // ============================================================
             // PlayerのStockを初期化
             // ============================================================
@@ -611,6 +614,7 @@ namespace Prototype
         // 螳滄圀縺ｮUpdate縺ｨ讀懆ｨｼ縺ｧ蜷後§騾ｲ陦悟・逅・ｒ菴ｿ縺・∝●豁｢荳ｭ縺ｮ遘ｻ蜍輔ｄ蠕ｩ蟶ｰ繧堤｢ｺ隱阪〒縺阪ｋ繧医≧縺ｫ縺吶ｋ縲・
         public void AdvanceFrame(float deltaTime, float unscaledDeltaTime)
         {
+            if (State == RoundState.Playing) roundElapsed += Mathf.Max(0f, deltaTime);
             // 謠ｺ繧後ｒ繧ｿ繝・メ蠎ｧ讓吶・螟画鋤縺ｫ豺ｷ縺懊↑縺・る撕豁｢縺励◆謖・〒繝励Ξ繧､繝､繝ｼ縺悟虚縺上・繧帝亟縺舌・
             RestoreCameraOffset();
             // 蛛懈ｭ｢荳ｭ繧３繧ｭ繝ｼ縺ｧ蜊ｳ蠎ｧ縺ｫ繝ｪ繝医Λ繧､縺ｧ縺阪ｋ縲・
@@ -639,6 +643,11 @@ namespace Prototype
             if (State != RoundState.Playing)
             {
                 endTimer += dt;
+                if (Application.CanStreamedLevelBeLoaded(ResultScreen.ScenePath))
+                {
+                    if (endTimer > 0.75f) SceneManager.LoadScene(ResultScreen.ScenePath);
+                    return;
+                }
                 // 邨ゆｺ・°繧・.75遘貞ｾ後∵眠縺励￥繧ｿ繝・・・上け繝ｪ繝・け縺吶ｋ縺ｨ蜀埼幕縺吶ｋ縲ゅΓ繝九Η繝ｼ謫堺ｽ懊・荳崎ｦ√・
                 if (endTimer > 0.75f && player.PressedThisFrame) ResetRound();
                 else player.transform.position = previousPlayerPosition;
@@ -1643,6 +1652,7 @@ namespace Prototype
         // 蜍晄風繧堤｢ｺ螳壹＠縲∬牡縺ｨ蜀・ｽ｢繧ｨ繝輔ぉ繧ｯ繝医〒邨先棡繧堤､ｺ縺励※谿九ｊ縺ｮ蠑ｾ繧堤援莉倥￠繧九・
         private void EndRound(bool cleared)
         {
+            ResultScreen.Record(cleared, roundElapsed, currentStock, gameObject.scene.path);
             State = cleared ? RoundState.Cleared : RoundState.Failed;
             player.SetColor(cleared ? Color.green : Color.red);
             EmitPulse(cleared ? boss.position : player.transform.position, cleared ? Color.green : Color.red, 3f);
