@@ -86,6 +86,7 @@ namespace Prototype.Editor
             var balloon = ballRoot.AddComponent<WaterBalloon>();
             Set(balloon, "body", ballBody);
             Set(balloon, "tether", line);
+            CueVisualBuilder.Configure(balloon);
             // 保存した水風船Prefabのアセット。
             GameObject balloonPrefab = PrefabUtility.SaveAsPrefabAsset(ballRoot, PlayerPrefabPath + "WaterBalloon.prefab");
             UnityEngine.Object.DestroyImmediate(ballRoot);

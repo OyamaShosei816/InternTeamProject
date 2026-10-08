@@ -49,6 +49,8 @@ namespace Prototype
         [Header("水風船の見た目：表示用Renderer")]
         [Tooltip("水風船Prefab内の球のRendererを設定します。色変更と伸び縮みに使います。")]
         [SerializeField] private Renderer body;
+        [Header("キューの見た目：レベル別モデル・エフェクト")]
+        [SerializeField] private CueLevelVisual levelVisual;
         // プレイヤーと水風船を結ぶ紐を描画するコンポーネント。
         [Header("紐の見た目：LineRenderer")]
         [Tooltip("水風船PrefabのLineRendererを設定します。紐の線を描くための参照です。")]
@@ -99,7 +101,8 @@ namespace Prototype
             transform.position = anchor + Vector3.forward * orbitRadius;
             PreviousPosition = transform.position;
             previousAngle = 90f;
-            body.enabled = true;
+            if (levelVisual != null) levelVisual.Hide();
+            body.enabled = levelVisual == null;
             UpdateAppearance(anchor);
         }
 
@@ -188,25 +191,34 @@ namespace Prototype
             remaining = recoveryDelay;
             Velocity = Vector3.zero;
             body.enabled = false;
+            if (levelVisual != null) levelVisual.Hide();
             tether.enabled = false;
         }
 
         // 仕様確定値：Lv.1はキャラの攻撃力、Lv.2とLv.3は2倍。速度による追加補正は行わない。
         public float CurrentDamage => Parameters.AttackPower * (Power == 1 ? 1f : 2f);
 
-        // 強さに応じた色、速度に応じた伸び縮み、紐の表示位置を更新する。
+        // レベル別モデルとエフェクト、速度による伸び縮み、紐の表示位置を更新する。
         private void UpdateAppearance(Vector3 anchor)
         {
-            if (properties == null) properties = new MaterialPropertyBlock();
-            // 仕様書の色分け：Lv.1は青、Lv.2はオレンジ、Lv.3は紫。
-            Color color = Power == 1 ? new Color(0.1f, 0.35f, 1f) : Power == 2 ? new Color(1f, 0.5f, 0f) : new Color(0.65f, 0f, 1f);
-            properties.SetColor("_BaseColor", color);
-            properties.SetColor("_Color", color);
-            body.SetPropertyBlock(properties);
-            // 伸び縮みは見た目だけに適用する。当たり判定半径は一定に保つ。
-            float stretch = Mathf.Clamp(Velocity.magnitude * 0.01f, 0f, 0.2f);
-            body.transform.localScale = new Vector3(0.8f - stretch * 0.4f, 0.8f - stretch * 0.4f, 0.8f + stretch) * Parameters.CueHitRange;
-            if (Velocity.sqrMagnitude > 0.05f) body.transform.rotation = Quaternion.LookRotation(Velocity, Vector3.up);
+            if (levelVisual != null)
+            {
+                body.enabled = false;
+                if (State == MotionState.Recovering) levelVisual.Hide();
+                else levelVisual.Apply(Power, Velocity, Parameters.CueHitRange);
+            }
+            else
+            {
+                // 旧Prefabにも対応するため、モデル未設定時のみ球を使う。
+                if (properties == null) properties = new MaterialPropertyBlock();
+                Color color = Power == 1 ? new Color(0.1f, 0.35f, 1f) : Power == 2 ? new Color(1f, 0.5f, 0f) : new Color(0.65f, 0f, 1f);
+                properties.SetColor("_BaseColor", color);
+                properties.SetColor("_Color", color);
+                body.SetPropertyBlock(properties);
+                float stretch = Mathf.Clamp(Velocity.magnitude * 0.01f, 0f, 0.2f);
+                body.transform.localScale = new Vector3(0.8f - stretch * 0.4f, 0.8f - stretch * 0.4f, 0.8f + stretch) * Parameters.CueHitRange;
+                if (Velocity.sqrMagnitude > 0.05f) body.transform.rotation = Quaternion.LookRotation(Velocity, Vector3.up);
+            }
             tether.enabled = State == MotionState.Ready || State == MotionState.Orbiting;
             if (!tether.enabled) return;
             // 紐は9点で描き、中央を少し下げてたるみを表現する。紐自体に当たり判定はない。

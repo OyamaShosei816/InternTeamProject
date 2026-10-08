@@ -427,6 +427,7 @@ MonoBehaviour:
   bulletPattern: {fileID: 526457592}
   effectMaterial: {fileID: 2100000, guid: 93bbea97d326e5043a6017ce2b3f2fd2, type: 2}
   bossMaxHealth: 150
+  bossHpSlider: {fileID: 1223773143}
   shotInterval: 1.5
   releaseInvulnerability: 0.22
   parryWindow: 0.12
@@ -857,6 +858,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3809529579472099901, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
   m_PrefabInstance: {fileID: 1408982228}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1223773143 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7881784101451692385, guid: 4e3300d324fdf424aa20acdb53e19594, type: 3}
+  m_PrefabInstance: {fileID: 1408982228}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Slider
 --- !u!114 &1265370326 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7798065943384369064, guid: e9a1bb42f514ccd45b3484a4633658af, type: 3}
