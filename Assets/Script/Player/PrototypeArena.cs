@@ -521,6 +521,9 @@ namespace Prototype
         // 残った弾・演�Eを片付け、HP、タイマ�E、�Eレイヤーと風船を開始状態に戻す、E
         public void ResetRound()
         {
+            // 前のラウンドで再生していた弾消しPrefabを全て片付ける。
+            BulletEraseEffectPlayer eraseEffects = GetComponent<BulletEraseEffectPlayer>();
+            if (eraseEffects != null) eraseEffects.Clear();
             roundElapsed = 0f;
             // ============================================================
             // Player��Stock��������
@@ -1471,7 +1474,7 @@ namespace Prototype
                     if (balloon.Power >= bullet.Power)
                     {
                         // 同レベル以下なら敵弾を消し、キューは強さと飛行／�E転を維持して貫通する、E
-                        if (!emittedEraseEffect)
+                        if (!TryPlayBulletErasePrefab(bullet, ballTime) && !emittedEraseEffect)
                         {
                             EmitBulletEraseEffect();
                             emittedEraseEffect = true;
@@ -1537,6 +1540,20 @@ namespace Prototype
             EmitPulse(position, Color.cyan, 5f, DragPlayer.Radius * player.Parameters.ParryRange);
         }
 
+        // 消した敵弾の接触時点に、キューのレベルと進行方向に応じたPrefabを再生する。
+        private bool TryPlayBulletErasePrefab(Bullet bullet, float contactTime)
+        {
+            // このシーンに登録された弾消し演出の管理コンポーネント。
+            BulletEraseEffectPlayer effectPlayer = GetComponent<BulletEraseEffectPlayer>();
+            if (effectPlayer == null) return false;
+            // 高速移動でもフレーム終端ではなく、実際に接触した位置へ演出を置く。
+            Vector3 impactPosition = Vector3.Lerp(bullet.PreviousPosition, bullet.transform.position, Mathf.Clamp01(contactTime));
+            // 公転中・投擲中ともに、キューが敵弾を打ち消した進行方向へ火花を飛ばす。
+            Vector3 impactDirection = BulletEraseEffectPlayer.ResolveDirection(
+                balloon.transform.position - balloon.PreviousPosition, balloon.Velocity,
+                bullet.Velocity, impactPosition - balloon.transform.position);
+            return effectPlayer.TryPlay(balloon.Power, impactPosition, impactDirection);
+        }
         // 弾を打ち消した位置のキュー外周に輪を作る。強化やパッシブによる判定半征E��反映する、E
         private void EmitBulletEraseEffect()
         {
