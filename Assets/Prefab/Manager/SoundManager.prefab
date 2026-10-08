@@ -49,6 +49,18 @@ MonoBehaviour:
     audioClip: {fileID: 8300000, guid: f5988f9822db0b04bb105821a96aac27, type: 3}
     volume: 0.5
     isLoop: 1
+  - name: TitleBGM
+    audioClip: {fileID: 8300000, guid: 0c3a242898efa2646bffd1964662f438, type: 3}
+    volume: 0.5
+    isLoop: 1
+  - name: HomeBGM
+    audioClip: {fileID: 8300000, guid: bd11d2153cc3f544db0b62b57d09ad04, type: 3}
+    volume: 0.5
+    isLoop: 1
+  - name: StageSelectBGM
+    audioClip: {fileID: 8300000, guid: a27754403db1cdc42ba789bdf5f7fa99, type: 3}
+    volume: 0.5
+    isLoop: 1
   seData:
   - name: PlayerDamageSE
     audioClip: {fileID: 8300000, guid: 0f17fb0ad60388c48a85821341690967, type: 3}
@@ -64,5 +76,17 @@ MonoBehaviour:
     isLoop: 0
   - name: BossWeakSE
     audioClip: {fileID: 8300000, guid: a27754403db1cdc42ba789bdf5f7fa99, type: 3}
+    volume: 0.7
+    isLoop: 0
+  - name: BossWeakSE
+    audioClip: {fileID: 8300000, guid: a27754403db1cdc42ba789bdf5f7fa99, type: 3}
+    volume: 0.7
+    isLoop: 0
+  - name: DecideSE
+    audioClip: {fileID: 8300000, guid: 17a904873a8640943abc7332a3e7c60a, type: 3}
+    volume: 0.7
+    isLoop: 0
+  - name: NoDecideSE
+    audioClip: {fileID: 8300000, guid: 4d90304331ff1184eb38057de33d4f67, type: 3}
     volume: 0.7
     isLoop: 0

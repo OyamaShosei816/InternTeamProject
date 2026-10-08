@@ -12,7 +12,7 @@ EditorBuildSettings:
     path: Assets/Scenes/Old_Scene/SakaiProtScene.unity
     guid: f11d8d755636cb34a8a9cb3b13927c1c
   - enabled: 0
-    path: Assets/Scenes/Kazuma.unity
+    path: Assets/Scenes/Old_Scene/Kazuma.unity
     guid: b7d5ff132af3d1f409ef111362d91bda
   - enabled: 0
     path: Assets/Scenes/Old_Scene/PlayerStock.unity
@@ -20,6 +20,18 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ResultScene.unity
     guid: 6619142748627fd44ae9760d65348fba
+  - enabled: 1
+    path: Assets/Scenes/Title.unity
+    guid: 81eabf09143af324fb9fd0a906cb8954
+  - enabled: 1
+    path: Assets/Scenes/Home.unity
+    guid: a821b28f615fd5943803e91c4c7d026d
+  - enabled: 1
+    path: Assets/Scenes/StageSelect.unity
+    guid: 1da44c275d2fe5b4bb836ed198650370
+  - enabled: 0
+    path: Assets/Scenes/GameLoop.unity
+    guid: a29c10fdc137eba4d999e51a2e1459ac
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
