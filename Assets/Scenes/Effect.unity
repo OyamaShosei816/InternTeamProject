@@ -795,55 +795,6 @@ Transform:
   - {fileID: 287229917}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &841660778
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 841660780}
-  - component: {fileID: 841660779}
-  m_Layer: 0
-  m_Name: Effect Layer Setup
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &841660779
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 841660778}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1d086130ebc90844cb7980eebe8a2e51, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Prototype.EffectLayerScope
-  additionalEffects:
-  - {fileID: 2690688}
-  - {fileID: 6684726665510013092, guid: dba5863eb383e004aa06f8b044f749e1, type: 3}
-  - {fileID: 3324568746659551704, guid: e99a9937809697440aa797152df6599d, type: 3}
-  - {fileID: 7174651144016609859, guid: 2a2b825a8948e0f42be48e7f753de124, type: 3}
---- !u!4 &841660780
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 841660778}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &859630092
 GameObject:
   m_ObjectHideFlags: 0
@@ -1702,6 +1653,67 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1001 &4813764787648714781
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 546724716971667172, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3383847224537872039, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: 'additionalEffects.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2690688}
+    - target: {fileID: 4443459251877874316, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: m_Name
+      value: Effect Layer Setup
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
 --- !u!1001 &7383572519917362629
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1810,4 +1822,4 @@ SceneRoots:
   - {fileID: 2690692}
   - {fileID: 728998725}
   - {fileID: 1223658232}
-  - {fileID: 841660780}
+  - {fileID: 4813764787648714781}

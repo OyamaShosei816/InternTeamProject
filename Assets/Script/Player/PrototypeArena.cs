@@ -521,7 +521,7 @@ namespace Prototype
         // 残った弾・演�Eを片付け、HP、タイマ�E、�Eレイヤーと風船を開始状態に戻す、E
         public void ResetRound()
         {
-            // 前のラウンドで再生していた弾消しPrefabを全て片付ける。
+            // 前�Eラウンドで再生してぁE��弾消しPrefabを�Eて牁E��ける、E
             BulletEraseEffectPlayer eraseEffects = GetComponent<BulletEraseEffectPlayer>();
             if (eraseEffects != null) eraseEffects.Clear();
             roundElapsed = 0f;
@@ -1540,15 +1540,15 @@ namespace Prototype
             EmitPulse(position, Color.cyan, 5f, DragPlayer.Radius * player.Parameters.ParryRange);
         }
 
-        // 消した敵弾の接触時点に、キューのレベルと進行方向に応じたPrefabを再生する。
+        // 消した敵弾の接触時点に、キューのレベルと進行方向に応じたPrefabを�E生する、E
         private bool TryPlayBulletErasePrefab(Bullet bullet, float contactTime)
         {
-            // このシーンに登録された弾消し演出の管理コンポーネント。
+            // こ�Eシーンに登録された弾消し演�Eの管琁E��ンポ�Eネント、E
             BulletEraseEffectPlayer effectPlayer = GetComponent<BulletEraseEffectPlayer>();
             if (effectPlayer == null) return false;
-            // 高速移動でもフレーム終端ではなく、実際に接触した位置へ演出を置く。
+            // 高速移動でもフレーム終端ではなく、実際に接触した位置へ演�Eを置く、E
             Vector3 impactPosition = Vector3.Lerp(bullet.PreviousPosition, bullet.transform.position, Mathf.Clamp01(contactTime));
-            // 公転中・投擲中ともに、キューが敵弾を打ち消した進行方向へ火花を飛ばす。
+            // 公転中・投擲中ともに、キューが敵弾を打ち消した進行方向へ火花を飛�Eす、E
             Vector3 impactDirection = BulletEraseEffectPlayer.ResolveDirection(
                 balloon.transform.position - balloon.PreviousPosition, balloon.Velocity,
                 bullet.Velocity, impactPosition - balloon.transform.position);
