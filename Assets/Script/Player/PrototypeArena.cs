@@ -289,6 +289,9 @@ namespace Prototype
         private float blinkTimer;
         private bool isGameOver;
 
+        [Header("GameOver管理")]
+        [SerializeField] private GameOverManager gameOverManager;
+
         // 谿九ｊ譎る俣縺後≠繧矩俣縺ｯ縲√ヲ繝・ヨ繧ｹ繝医ャ繝嶺ｸｭ縺ｨ縺励※謇ｱ縺・・
         // 繧ｭ繝･繝ｼ縺悟ｼｱ轤ｹ縺ｫ蠖薙◆縺｣縺溽椪髢薙↓繧ｲ繝ｼ繝騾ｲ陦後ｒ豁｢繧√ｋ譎る俣縲ょｮ滓凾髢薙・遘呈焚縺ｧ謖・ｮ壹☆繧九・
         [Header("弱点命中：ヒットストップ")]
@@ -614,6 +617,8 @@ namespace Prototype
         // 螳滄圀縺ｮUpdate縺ｨ讀懆ｨｼ縺ｧ蜷後§騾ｲ陦悟・逅・ｒ菴ｿ縺・∝●豁｢荳ｭ縺ｮ遘ｻ蜍輔ｄ蠕ｩ蟶ｰ繧堤｢ｺ隱阪〒縺阪ｋ繧医≧縺ｫ縺吶ｋ縲・
         public void AdvanceFrame(float deltaTime, float unscaledDeltaTime)
         {
+            if (isGameOver) return;
+
             if (State == RoundState.Playing) roundElapsed += Mathf.Max(0f, deltaTime);
             // 謠ｺ繧後ｒ繧ｿ繝・メ蠎ｧ讓吶・螟画鋤縺ｫ豺ｷ縺懊↑縺・る撕豁｢縺励◆謖・〒繝励Ξ繧､繝､繝ｼ縺悟虚縺上・繧帝亟縺舌・
             RestoreCameraOffset();
@@ -752,19 +757,18 @@ namespace Prototype
             {
                 return;
             }
-            else
-            {
-                if (SoundManager.Instance != null)
-                {
-                    SoundManager.Instance.PlaySE("PlayerDamageSE");
-                }
-            }
 
             // ---------------------------------------------------------
             // Stockが残っている場合
             // ---------------------------------------------------------
             if (currentStock > 0)
             {
+                // 通常被弾SEを再生
+                if (SoundManager.Instance != null)
+                {
+                    SoundManager.Instance.PlaySE("PlayerDamageSE");
+                }
+
                 // Stockを1つ減らす
                 currentStock--;
 
@@ -789,7 +793,41 @@ namespace Prototype
             // ---------------------------------------------------------
             // Stockが0の状態でさらに被弾した場合
             // ---------------------------------------------------------
-            //GameOver();
+
+            // 通常被弾SEは鳴らさず、GameOver処理へ
+            GameOver();
+        }
+
+        // GameOver処理
+        private void GameOver()
+        {
+            if (isGameOver) return;
+            isGameOver = true;
+            player.SetCanMove(false);
+            if (gameOverManager != null)
+            {
+                gameOverManager.StartGameOver();
+            }
+        }
+
+        // GameOverからのContinue
+        public void ContinueGame()
+        {
+            currentStock = stockObjects.Length;
+            damageInvincibleTimer = damageInvincibleTime;
+            blinkTimer = 0f;
+            invincible = Mathf.Max(invincible, damageInvincibleTime);
+            for (int i = 0; i < stockObjects.Length; i++)
+            {
+                if (stockObjects[i] != null)
+                {
+                    stockObjects[i].SetActive(true);
+                }
+            }
+            player.ResetPlayer(player.transform.position, true);
+            player.SetCanMove(true);
+            previousPlayerPosition = player.transform.position;
+            isGameOver = false;
         }
 
         // ============================================================
