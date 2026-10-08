@@ -874,6 +874,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: StageBackGround
       objectReference: {fileID: 0}
+    - target: {fileID: 8088713587338184742, guid: d5bdd95e1485d9b4fa98597dbd600a6d, type: 3}
+      propertyPath: scrollSpeed.y
+      value: -0.05
+      objectReference: {fileID: 0}
     - target: {fileID: 8201009106805596466, guid: d5bdd95e1485d9b4fa98597dbd600a6d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
