@@ -19,16 +19,17 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties:
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _VerticalResolution: 288
-    - _IntegerScale: 0
     - _ColorLevels: 32
     - _ColorReduction: 0
     - _DitherStrength: 0
+    - _IntegerScale: 0
+    - _VerticalResolution: 500
     m_Colors: []
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
