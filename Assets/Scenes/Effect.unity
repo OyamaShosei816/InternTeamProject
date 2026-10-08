@@ -403,6 +403,7 @@ GameObject:
   m_Component:
   - component: {fileID: 431491657}
   - component: {fileID: 431491656}
+  - component: {fileID: 431491658}
   m_Layer: 0
   m_Name: Kazuma Gameplay Prototype
   m_TagString: Untagged
@@ -495,6 +496,23 @@ Transform:
   - {fileID: 1863805679}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &431491658
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 431491655}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae4eddac4ad52f24295ec4f2376f8e9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Prototype.BulletEraseEffectPlayer
+  level1Prefab: {fileID: 6684726665510013092, guid: dba5863eb383e004aa06f8b044f749e1, type: 3}
+  level2Prefab: {fileID: 3324568746659551704, guid: e99a9937809697440aa797152df6599d, type: 3}
+  level3Prefab: {fileID: 7174651144016609859, guid: 2a2b825a8948e0f42be48e7f753de124, type: 3}
+  sizeMultiplier: 1
+  maximumEffects: 24
 --- !u!1 &489025464
 GameObject:
   m_ObjectHideFlags: 0
