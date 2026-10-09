@@ -46,7 +46,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SoundManager
   bgmData:
   - name: Stage1BGM
-    audioClip: {fileID: 8300000, guid: f5988f9822db0b04bb105821a96aac27, type: 3}
+    audioClip: {fileID: 8300000, guid: 91e9d52771499c143900861bbd8e98f2, type: 3}
     volume: 0.5
     isLoop: 1
   - name: TitleBGM
