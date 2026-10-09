@@ -95,6 +95,6 @@ MonoBehaviour:
     volume: 0.7
     isLoop: 0
   - name: GameOverSE
-    audioClip: {fileID: 8300000, guid: ed9024e97abb2a648938609e368599fa, type: 3}
+    audioClip: {fileID: 8300000, guid: 1e9d99b5bdadf684b885aac4ae182dca, type: 3}
     volume: 0.7
     isLoop: 0
