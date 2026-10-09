@@ -46,6 +46,12 @@ namespace Prototype
         {
             // キューのレベルで演出を選択し、範囲外は1～3へ丸める。
             GameObject prefab = Mathf.Clamp(cueLevel, 1, 3) == 1 ? level1Prefab : cueLevel == 2 ? level2Prefab : level3Prefab;
+            return TryPlay(prefab, position, direction);
+        }
+
+        // 敵への命中演出も同じ再生・終了管理を利用する。
+        public bool TryPlay(GameObject prefab, Vector3 position, Vector3 direction)
+        {
             if (prefab == null || !isActiveAndEnabled) return false;
             while (playing.Count >= Mathf.Max(1, maximumEffects)) RemoveAt(0);
             // 提供Prefabの火花はローカル+Z方向へ放射されるため、+Zを打ち消し方向に合わせる。

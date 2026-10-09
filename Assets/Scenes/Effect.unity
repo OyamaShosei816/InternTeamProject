@@ -431,6 +431,8 @@ MonoBehaviour:
   weakPoint: {fileID: 166298524}
   bulletPattern: {fileID: 526457592}
   effectMaterial: {fileID: 2100000, guid: 93bbea97d326e5043a6017ce2b3f2fd2, type: 2}
+  bodyHitPrefab: {fileID: 983558642658017517, guid: 02f71ff56a7775b4e963027afb8fd8c9, type: 3}
+  weakHitPrefab: {fileID: 3392994685594024895, guid: e865299b702e7714c8aee966a2548442, type: 3}
   bossMaxHealth: 150
   bossHpSlider: {fileID: 1223773143}
   shotInterval: 1.5

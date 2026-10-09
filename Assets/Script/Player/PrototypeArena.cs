@@ -60,6 +60,10 @@ namespace Prototype
         [Tooltip("エフェクトのLineRendererに使用するマテリアルを設定します。")]
         [SerializeField] private Material effectMaterial;
 
+        [Header("Enemy hit effects")]
+        [SerializeField] private GameObject bodyHitPrefab;
+        [SerializeField] private GameObject weakHitPrefab;
+
         [Header("難易度：ボスの最大HP")]
         [Tooltip("ラウンド開始時のボスのHPです。")]
         [SerializeField] private float bossMaxHealth = 150f;
@@ -1622,7 +1626,8 @@ namespace Prototype
                 BossHealth = Mathf.Max(0f, BossHealth - balloon.CurrentDamage);
                 //ボスのHPをゲージUIに反映
                 UpdateBossHPUI();
-                EmitPulse(weakPoint.position, Color.yellow, 1.6f);
+                if (!TryPlayEnemyHitPrefab(weakHitPrefab, weakTime))
+                    EmitPulse(weakPoint.position, Color.yellow, 1.6f);
                 StopOnBalloonImpact(weakPointHitStop);
                 BeginCameraShake();
                 Debug.Log($"Prototype: weak point hit. Boss HP {BossHealth:0}/{bossMaxHealth:0}", this);
@@ -1634,7 +1639,8 @@ namespace Prototype
                 {
                     SoundManager.Instance.PlaySE("BossDamageSE");
                 }
-                EmitPulse(balloon.transform.position, Color.gray, 0.7f);
+                if (!TryPlayEnemyHitPrefab(bodyHitPrefab, bodyTime))
+                    EmitPulse(balloon.transform.position, Color.gray, 0.7f);
                 StopOnBalloonImpact(bodyHitStop);
             }
         }
@@ -1643,6 +1649,16 @@ namespace Prototype
         // from/to縺ｯ逶ｸ謇九°繧芽ｦ九◆逶ｸ蟇ｾ菴咲ｽｮ縲〉adius縺ｯ蜿梧婿縺ｮ蜊雁ｾ・・蜷郁ｨ医・
         // time縺ｯ譛蛻昴↓謗･隗ｦ縺吶ｋ譎らせ・・=蛹ｺ髢薙・髢句ｧ九・=邨ゆｺ・ｼ峨よ綾繧雁､縺荊rue縺ｮ縺ｨ縺阪↓菴ｿ縺・・
         // duration縺ｯ蛛懈ｭ｢縺輔○繧句ｮ滓凾髢薙・遘呈焚縲ょ酔譎ょ多荳ｭ縺ｧ蛛懈ｭ｢譎る俣縺檎ｩ阪∩荳翫′繧峨↑縺・ｈ縺・聞縺・婿繧剃ｽｿ縺・・
+        private bool TryPlayEnemyHitPrefab(GameObject prefab, float contactTime)
+        {
+            var effectPlayer = GetComponent<BulletEraseEffectPlayer>();
+            if (prefab == null || effectPlayer == null) return false;
+            Vector3 position = Vector3.Lerp(balloon.PreviousPosition, balloon.transform.position, contactTime);
+            Vector3 direction = BulletEraseEffectPlayer.ResolveDirection(
+                balloon.transform.position - balloon.PreviousPosition, balloon.Velocity,
+                Vector3.zero, boss.position - position);
+            return effectPlayer.TryPlay(prefab, position, direction);
+        }
         private void BeginHitStop(float duration)
         {
             if (duration <= 0f || float.IsNaN(duration) || float.IsInfinity(duration)) return;
