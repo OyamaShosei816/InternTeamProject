@@ -259,8 +259,16 @@ PrefabInstance:
       value: WaterBalloon
       objectReference: {fileID: 0}
     - target: {fileID: 5849756171208157741, guid: 218ced46014985541a87b3f930319527, type: 3}
+      propertyPath: tether
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 5849756171208157741, guid: 218ced46014985541a87b3f930319527, type: 3}
+      propertyPath: chainWidth
+      value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5849756171208157741, guid: 218ced46014985541a87b3f930319527, type: 3}
       propertyPath: chainTetherPrefab
-      value:
+      value: 
       objectReference: {fileID: 7442679412081108818, guid: 321e2b66dddd05e4e9c4601119989788, type: 3}
     - target: {fileID: 7832358170989371430, guid: 218ced46014985541a87b3f930319527, type: 3}
       propertyPath: m_LocalPosition.x
@@ -415,6 +423,8 @@ MonoBehaviour:
   weakPoint: {fileID: 166298524}
   bulletPattern: {fileID: 526457592}
   effectMaterial: {fileID: 2100000, guid: 93bbea97d326e5043a6017ce2b3f2fd2, type: 2}
+  bodyHitPrefab: {fileID: 0}
+  weakHitPrefab: {fileID: 0}
   bossMaxHealth: 150
   bossHpSlider: {fileID: 1223773143}
   shotInterval: 1.5
@@ -452,6 +462,7 @@ MonoBehaviour:
   - {fileID: 1094800355}
   - {fileID: 12616836}
   - {fileID: 1139083180}
+  gameOverManager: {fileID: 0}
   weakPointHitStop: 0.15
   cameraShakeStrength: 0.12
   cameraShakeDuration: 0.15

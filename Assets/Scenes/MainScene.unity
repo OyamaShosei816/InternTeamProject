@@ -381,6 +381,14 @@ PrefabInstance:
       propertyPath: m_Positions.Array.data[1].z
       value: -5.85
       objectReference: {fileID: 0}
+    - target: {fileID: 5849756171208157741, guid: 218ced46014985541a87b3f930319527, type: 3}
+      propertyPath: chainWidth
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5849756171208157741, guid: 218ced46014985541a87b3f930319527, type: 3}
+      propertyPath: chainTetherPrefab
+      value: 
+      objectReference: {fileID: 7442679412081108818, guid: 321e2b66dddd05e4e9c4601119989788, type: 3}
     - target: {fileID: 7832358170989371430, guid: 218ced46014985541a87b3f930319527, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -999,7 +1007,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3383847224537872039, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
       propertyPath: additionalEffects.Array.size
-      value: 6
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 3383847224537872039, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
       propertyPath: 'additionalEffects.Array.data[0]'
@@ -1013,6 +1021,10 @@ PrefabInstance:
       propertyPath: 'additionalEffects.Array.data[5]'
       value: 
       objectReference: {fileID: 3392994685594024895, guid: e865299b702e7714c8aee966a2548442, type: 3}
+    - target: {fileID: 3383847224537872039, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: 'additionalEffects.Array.data[6]'
+      value: 
+      objectReference: {fileID: 7442679412081108818, guid: 321e2b66dddd05e4e9c4601119989788, type: 3}
     - target: {fileID: 4443459251877874316, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
       propertyPath: m_Name
       value: Effect Layer Setup
