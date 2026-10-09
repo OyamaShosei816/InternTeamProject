@@ -1916,6 +1916,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1475979417}
     - target: {fileID: 7574668378009106100, guid: 90af2acfbc6b6cb4b847726991fa907f, type: 3}
+      propertyPath: fadeInDuration
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7574668378009106100, guid: 90af2acfbc6b6cb4b847726991fa907f, type: 3}
       propertyPath: playerRenderer
       value: 
       objectReference: {fileID: 1330849354}
