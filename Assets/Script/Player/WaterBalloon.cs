@@ -55,6 +55,11 @@ namespace Prototype
         [Header("紐の見た目：LineRenderer")]
         [Tooltip("水風船PrefabのLineRendererを設定します。紐の線を描くための参照です。")]
         [SerializeField] private LineRenderer tether;
+        [Header("紐の見た目：EF_Chain_Q（設定時はLineRendererを置換）")]
+        [SerializeField] private Transform chainTether;
+        [Tooltip("シーンに設定する接続エフェクトのPrefab。初回更新時に生成します。")]
+        [SerializeField] private GameObject chainTetherPrefab;
+        [SerializeField, Min(0.01f)] private float chainWidth = 0.3f;
         // 倍率1の基準となる当たり判定半径。速度による見た目の伸び縮みでは変化しない。
         public const float Radius = 0.4f;
         // キャラクター性能を反映した現在の当たり判定半径（ワールド単位）。
@@ -178,7 +183,7 @@ namespace Prototype
             State = MotionState.Flying;
             // 飛行の寿命は最大3秒。範囲外へ出た場合も回復待ちになる。
             remaining = 3f;
-            tether.enabled = false;
+            HideTether();
             return true;
         }
 
@@ -192,7 +197,7 @@ namespace Prototype
             Velocity = Vector3.zero;
             body.enabled = false;
             if (levelVisual != null) levelVisual.Hide();
-            tether.enabled = false;
+            HideTether();
         }
 
         // 仕様確定値：Lv.1はキャラの攻撃力、Lv.2とLv.3は2倍。速度による追加補正は行わない。
@@ -201,6 +206,7 @@ namespace Prototype
         // レベル別モデルとエフェクト、速度による伸び縮み、紐の表示位置を更新する。
         private void UpdateAppearance(Vector3 anchor)
         {
+            EnsureChainTether();
             if (levelVisual != null)
             {
                 body.enabled = false;
@@ -219,7 +225,24 @@ namespace Prototype
                 body.transform.localScale = new Vector3(0.8f - stretch * 0.4f, 0.8f - stretch * 0.4f, 0.8f + stretch) * Parameters.CueHitRange;
                 if (Velocity.sqrMagnitude > 0.05f) body.transform.rotation = Quaternion.LookRotation(Velocity, Vector3.up);
             }
-            tether.enabled = State == MotionState.Ready || State == MotionState.Orbiting;
+            bool connected = State == MotionState.Ready || State == MotionState.Orbiting;
+            if (chainTether != null)
+            {
+                if (tether != null) tether.enabled = false;
+                Vector3 offset = transform.position - anchor;
+                bool visible = connected && offset.sqrMagnitude > 0.000001f;
+                chainTether.gameObject.SetActive(visible);
+                if (visible)
+                {
+                    // EF_Chain_Qは単位Quad。ローカルYを接続方向、表面を上向きにする。
+                    chainTether.SetPositionAndRotation((anchor + transform.position) * 0.5f,
+                        Quaternion.LookRotation(Vector3.down, offset.normalized));
+                    chainTether.localScale = new Vector3(chainWidth, offset.magnitude, 1f);
+                }
+                return;
+            }
+            if (tether == null) return;
+            tether.enabled = connected;
             if (!tether.enabled) return;
             // 紐は9点で描き、中央を少し下げてたるみを表現する。紐自体に当たり判定はない。
             tether.positionCount = 9;
@@ -233,6 +256,28 @@ namespace Prototype
                 point += Vector3.down * (Mathf.Sin(t * Mathf.PI) * 0.2f);
                 tether.SetPosition(i, point);
             }
+        }
+
+        private void HideTether()
+        {
+            if (tether != null) tether.enabled = false;
+            if (chainTether != null) chainTether.gameObject.SetActive(false);
+        }
+
+        private void EnsureChainTether()
+        {
+            if (chainTether != null || chainTetherPrefab == null) return;
+            chainTether = Instantiate(chainTetherPrefab, transform).transform;
+            chainTether.name = "EF_Chain_Q";
+            // 接続エフェクトは見た目専用。PrefabのColliderは使用しない。
+            foreach (var collider in chainTether.GetComponentsInChildren<Collider>(true))
+                collider.enabled = false;
+            if (tether != null) tether.enabled = false;
+        }
+
+        private void OnDisable()
+        {
+            HideTether();
         }
     }
 }

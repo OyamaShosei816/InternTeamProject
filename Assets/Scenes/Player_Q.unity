@@ -258,22 +258,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: WaterBalloon
       objectReference: {fileID: 0}
-    - target: {fileID: 2723330194963367888, guid: 218ced46014985541a87b3f930319527, type: 3}
-      propertyPath: m_Positions.Array.data[0].y
-      value: 0.65
-      objectReference: {fileID: 0}
-    - target: {fileID: 2723330194963367888, guid: 218ced46014985541a87b3f930319527, type: 3}
-      propertyPath: m_Positions.Array.data[0].z
-      value: -4.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 2723330194963367888, guid: 218ced46014985541a87b3f930319527, type: 3}
-      propertyPath: m_Positions.Array.data[1].y
-      value: 0.65
-      objectReference: {fileID: 0}
-    - target: {fileID: 2723330194963367888, guid: 218ced46014985541a87b3f930319527, type: 3}
-      propertyPath: m_Positions.Array.data[1].z
-      value: -5.85
-      objectReference: {fileID: 0}
+    - target: {fileID: 5849756171208157741, guid: 218ced46014985541a87b3f930319527, type: 3}
+      propertyPath: chainTetherPrefab
+      value:
+      objectReference: {fileID: 7442679412081108818, guid: 321e2b66dddd05e4e9c4601119989788, type: 3}
     - target: {fileID: 7832358170989371430, guid: 218ced46014985541a87b3f930319527, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -314,7 +302,8 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 2723330194963367888, guid: 218ced46014985541a87b3f930319527, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
