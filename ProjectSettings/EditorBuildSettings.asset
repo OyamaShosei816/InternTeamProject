@@ -33,7 +33,7 @@ EditorBuildSettings:
     path: Assets/Scenes/GameLoop.unity
     guid: a29c10fdc137eba4d999e51a2e1459ac
   - enabled: 0
-    path: Assets/Scenes/BackGround.unity
+    path: Assets/Scenes/Old_Scene/BackGround.unity
     guid: 124a46b2c4b072a4caba777b542c704d
   - enabled: 1
     path: Assets/Scenes/StageSelect.unity
