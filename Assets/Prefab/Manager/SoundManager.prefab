@@ -90,3 +90,11 @@ MonoBehaviour:
     audioClip: {fileID: 8300000, guid: 4d90304331ff1184eb38057de33d4f67, type: 3}
     volume: 0.7
     isLoop: 0
+  - name: PlayerDeathSE
+    audioClip: {fileID: 8300000, guid: 69914be851b8dde41a8c8fc17b350fe2, type: 3}
+    volume: 0.7
+    isLoop: 0
+  - name: GameOverSE
+    audioClip: {fileID: 8300000, guid: ed9024e97abb2a648938609e368599fa, type: 3}
+    volume: 0.7
+    isLoop: 0
