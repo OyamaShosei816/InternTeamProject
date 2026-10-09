@@ -571,7 +571,7 @@ MonoBehaviour:
   - {fileID: 1094800355}
   - {fileID: 12616836}
   - {fileID: 1139083180}
-  gameOverManager: {fileID: 0}
+  gameOverManager: {fileID: 1575020840}
   weakPointHitStop: 0.15
   cameraShakeStrength: 0.12
   cameraShakeDuration: 0.15
@@ -1911,6 +1911,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4143444161482671223, guid: 90af2acfbc6b6cb4b847726991fa907f, type: 3}
   m_PrefabInstance: {fileID: 1575020838}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1575020840 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7574668378009106100, guid: 90af2acfbc6b6cb4b847726991fa907f, type: 3}
+  m_PrefabInstance: {fileID: 1575020838}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f612686d537faaa44925fe8de4109ab8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameOverManager
 --- !u!114 &1736902205 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2988958533457206282, guid: a1def44b72d7ab04b93969959604fdb6, type: 3}
