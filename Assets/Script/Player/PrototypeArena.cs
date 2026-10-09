@@ -1582,7 +1582,7 @@ namespace Prototype
             EmitPulse(position, Color.cyan, 5f, DragPlayer.Radius * player.Parameters.ParryRange);
         }
 
-        // 消した敵弾の接触時点に、キューのレベルと進行方向に応じたPrefabを�E生する、E
+        // 消した敵弾の接触時点に、敵弾のレベルとキューの進行方向に応じたPrefabを再生する。
         private bool TryPlayBulletErasePrefab(Bullet bullet, float contactTime)
         {
             // こ�Eシーンに登録された弾消し演�Eの管琁E��ンポ�Eネント、E
@@ -1594,7 +1594,7 @@ namespace Prototype
             Vector3 impactDirection = BulletEraseEffectPlayer.ResolveDirection(
                 balloon.transform.position - balloon.PreviousPosition, balloon.Velocity,
                 bullet.Velocity, impactPosition - balloon.transform.position);
-            return effectPlayer.TryPlay(balloon.Power, impactPosition, impactDirection);
+            return effectPlayer.TryPlay(bullet.Power, impactPosition, impactDirection);
         }
         // 弾を打ち消した位置のキュー外周に輪を作る。強化やパッシブによる判定半征E��反映する、E
         private void EmitBulletEraseEffect()

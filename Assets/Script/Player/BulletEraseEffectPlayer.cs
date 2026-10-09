@@ -4,19 +4,19 @@ using UnityEngine.SceneManagement;
 
 namespace Prototype
 {
-    // キューのレベルに応じた弾消しPrefabを、衝突位置と進行方向に合わせて再生する。
+    // 敵弾のレベルに応じた弾消しPrefabを、衝突位置と進行方向に合わせて再生する。
     public sealed class BulletEraseEffectPlayer : MonoBehaviour
     {
-        // レベル1のキューで敵弾を消したときに使う演出。
-        [Header("弾消し：キューレベル1のエフェクト")]
-        [Tooltip("EF_Bullet_Dest/fixのLv1 Prefabを指定します。敵弾のレベルではなくキューのレベルで選びます。")]
+        // レベル1の敵弾を消したときに使う演出。
+        [Header("弾消し：敵弾レベル1のエフェクト")]
+        [Tooltip("EF_Bullet_Dest/fixのLv1 Prefabを指定します。消した敵弾のレベルで選びます。")]
         [SerializeField] private GameObject level1Prefab;
-        // レベル2のキューで敵弾を消したときに使う演出。
-        [Header("弾消し：キューレベル2のエフェクト")]
+        // レベル2の敵弾を消したときに使う演出。
+        [Header("弾消し：敵弾レベル2のエフェクト")]
         [Tooltip("EF_Bullet_Dest/fixのLv2 Prefabを指定します。")]
         [SerializeField] private GameObject level2Prefab;
-        // レベル3のキューで敵弾を消したときに使う演出。
-        [Header("弾消し：キューレベル3のエフェクト")]
+        // レベル3の敵弾を消したときに使う演出。
+        [Header("弾消し：敵弾レベル3のエフェクト")]
         [Tooltip("EF_Bullet_Dest/fixのLv3 Prefabを指定します。")]
         [SerializeField] private GameObject level3Prefab;
         // 元のPrefabに掛ける表示倍率。火花・閃光をまとめて調整する。
@@ -42,10 +42,10 @@ namespace Prototype
         private readonly List<PlayingEffect> playing = new List<PlayingEffect>();
 
         // 位置と方向はワールド座標。Prefab未設定時だけfalseを返し、既存演出へ戻せるようにする。
-        public bool TryPlay(int cueLevel, Vector3 position, Vector3 direction)
+        public bool TryPlay(int bulletLevel, Vector3 position, Vector3 direction)
         {
-            // キューのレベルで演出を選択し、範囲外は1～3へ丸める。
-            GameObject prefab = Mathf.Clamp(cueLevel, 1, 3) == 1 ? level1Prefab : cueLevel == 2 ? level2Prefab : level3Prefab;
+            // 敵弾のレベルで演出を選択し、範囲外は1～3へ丸める。
+            GameObject prefab = Mathf.Clamp(bulletLevel, 1, 3) == 1 ? level1Prefab : bulletLevel == 2 ? level2Prefab : level3Prefab;
             return TryPlay(prefab, position, direction);
         }
 

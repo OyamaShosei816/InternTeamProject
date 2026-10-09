@@ -49,17 +49,17 @@ namespace Prototype.Editor
             // 敵弾をプレイヤーの当たり判定から離して配置する基準。
             var player = UnityEngine.Object.FindFirstObjectByType<DragPlayer>();
             Check(effects != null, "Scene registration");
-            // それぞれのレベルで実際のTickBulletsを通す。
+            // Lv3キューで各レベルの敵弾を消し、敵弾のレベルで選択されることを確認する。
             for (int level = 1; level <= 3; level++)
             {
                 arena.ResetRound();
                 ball.Simulate(player.transform.position, Vector3.zero, true, 0f);
-                typeof(WaterBalloon).GetProperty("Power").SetValue(ball, level);
+                typeof(WaterBalloon).GetProperty("Power").SetValue(ball, 3);
                 ball.Launch(Vector3.right);
                 arena.SpawnBullet(ball.transform.position, Vector3.zero, level);
                 arena.TickBullets(player.transform.position, player.transform.position, 0f);
                 Check(arena.ActiveBulletCount == 0, "Enemy bullet removed at level " + level);
-                Check(FindEffect(level) != null, "Selected cue level " + level);
+                Check(FindEffect(level) != null, "Selected enemy bullet level " + level + " with cue level 3");
                 arena.ResetRound();
                 Check(FindEffect(level) == null, "Reset removes remaining particles");
                 // ワールドのX/Z平面で四方向へ発射する。
