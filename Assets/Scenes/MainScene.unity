@@ -534,6 +534,8 @@ MonoBehaviour:
   weakPoint: {fileID: 166298524}
   bulletPattern: {fileID: 526457592}
   effectMaterial: {fileID: 2100000, guid: 93bbea97d326e5043a6017ce2b3f2fd2, type: 2}
+  bodyHitPrefab: {fileID: 983558642658017517, guid: 02f71ff56a7775b4e963027afb8fd8c9, type: 3}
+  weakHitPrefab: {fileID: 3392994685594024895, guid: e865299b702e7714c8aee966a2548442, type: 3}
   bossMaxHealth: 150
   bossHpSlider: {fileID: 1223773143}
   shotInterval: 1.5
@@ -996,9 +998,21 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3383847224537872039, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: additionalEffects.Array.size
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 3383847224537872039, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
       propertyPath: 'additionalEffects.Array.data[0]'
       value: 
       objectReference: {fileID: 2690688}
+    - target: {fileID: 3383847224537872039, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: 'additionalEffects.Array.data[4]'
+      value: 
+      objectReference: {fileID: 983558642658017517, guid: 02f71ff56a7775b4e963027afb8fd8c9, type: 3}
+    - target: {fileID: 3383847224537872039, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
+      propertyPath: 'additionalEffects.Array.data[5]'
+      value: 
+      objectReference: {fileID: 3392994685594024895, guid: e865299b702e7714c8aee966a2548442, type: 3}
     - target: {fileID: 4443459251877874316, guid: 33faaeaead6c1584c8f70338dbf718b4, type: 3}
       propertyPath: m_Name
       value: Effect Layer Setup
